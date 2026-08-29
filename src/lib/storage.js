@@ -9,10 +9,8 @@ export const DEFAULT_SETTINGS = {
   businessName: 'Smart Parts Billing',
   phone: '',
   address: '',
-  paymentDetails: '',
   pan: '',
   invoicePrefix: 'INV',
-  dueDays: 7,
   footerNote: 'Thank you for your business.',
   logo: '',
 }

@@ -2,8 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
   LayoutDashboard, FilePlus2, ReceiptText, Users, Boxes, Settings, Search, Plus, Minus,
-  Trash2, Download, Share2, Eye, Save, Upload, Building2, Phone, MapPin, CreditCard,
-  CheckCircle2, Clock3, IndianRupee, TrendingUp, Menu, X, ChevronRight, Pencil, FileDown,
+  Trash2, Download, Share2, Eye, Save, Upload, Building2, Phone, MapPin,
+  CheckCircle2, IndianRupee, TrendingUp, Menu, X, ChevronRight, Pencil, FileDown,
   RefreshCw, ShieldCheck, Sparkles, PackagePlus, BadgeCheck, Database, ArrowUpRight,
 } from 'lucide-react'
 import { DEFAULT_PARTS } from './data/parts.js'
@@ -20,9 +20,6 @@ const NAV = [
 ]
 
 const today = () => new Date().toISOString().slice(0, 10)
-const plusDays = (days) => {
-  const d = new Date(); d.setDate(d.getDate() + Number(days || 0)); return d.toISOString().slice(0, 10)
-}
 const money = (n) => `₹${Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`)
 
@@ -31,7 +28,7 @@ function blankInvoice(settings, invoices = []) {
   return {
     id: uid(),
     invoiceNo: `${settings.invoicePrefix || 'INV'}-${String(next).padStart(4, '0')}`,
-    customerName: '', phone: '', address: '', date: today(), dueDate: plusDays(settings.dueDays), status: 'Unpaid',
+    customerName: '', phone: '', address: '', date: today(),
     items: [], discount: 0, otherCharges: 0, referenceNo: '', note: '', savedAt: null,
   }
 }
@@ -86,11 +83,6 @@ function MetricCard({ icon: Icon, label, value, hint, tone = 'cyan' }) {
   )
 }
 
-function StatusBadge({ status }) {
-  const s = status || 'Unpaid'
-  return <span className={`status-badge status-${s.toLowerCase().replace(/\s/g, '-')}`}>{s}</span>
-}
-
 function EmptyState({ icon: Icon = ReceiptText, title, text, action }) {
   return <div className="empty-state"><div className="empty-icon"><Icon size={28}/></div><strong>{title}</strong><span>{text}</span>{action}</div>
 }
@@ -135,10 +127,19 @@ function Shell({ view, setView, settings, invoices, children, onBackup, sidebarO
 function Dashboard({ invoices, settings, setView }) {
   const totals = useMemo(() => {
     const total = invoices.reduce((s, i) => s + Number(i.total || 0), 0)
-    const unpaid = invoices.filter(i => i.status !== 'Paid').reduce((s, i) => s + Number(i.total || 0), 0)
+    const customerCount = new Set(
+      invoices
+        .map(i => String(i.customerName || '').trim().toLowerCase())
+        .filter(Boolean)
+    ).size
     const month = new Date().toISOString().slice(0,7)
     const monthInv = invoices.filter(i => String(i.date || '').startsWith(month))
-    return { total, unpaid, month: monthInv.reduce((s,i)=>s+Number(i.total||0),0), monthCount: monthInv.length }
+    return {
+      total,
+      customerCount,
+      month: monthInv.reduce((s,i)=>s+Number(i.total||0),0),
+      monthCount: monthInv.length
+    }
   }, [invoices])
   const latest = [...invoices].sort((a,b)=>String(b.savedAt||'').localeCompare(String(a.savedAt||''))).slice(0,5)
 
@@ -166,14 +167,14 @@ function Dashboard({ invoices, settings, setView }) {
     <div className="metrics-grid">
       <MetricCard icon={ReceiptText} label="Total Invoices" value={invoices.length} hint="All saved bills" tone="cyan" />
       <MetricCard icon={IndianRupee} label="Total Billed" value={money(totals.total)} hint="Lifetime billing" tone="violet" />
-      <MetricCard icon={Clock3} label="Pending Amount" value={money(totals.unpaid)} hint="Unpaid + part paid" tone="amber" />
+      <MetricCard icon={Users} label="Customers" value={totals.customerCount} hint="Unique customers" tone="amber" />
       <MetricCard icon={TrendingUp} label="This Month" value={money(totals.month)} hint={`${totals.monthCount} invoice${totals.monthCount === 1 ? '' : 's'}`} tone="green" />
     </div>
 
     <div className="dashboard-grid">
       <Card className="section-card recent-card">
         <div className="section-head"><div><span className="eyebrow">RECENT ACTIVITY</span><h2>Latest invoices</h2></div><button className="text-btn" onClick={()=>setView('invoices')}>View all <ArrowUpRight size={16}/></button></div>
-        {latest.length ? <div className="invoice-list">{latest.map(inv => <div className="invoice-list-row" key={inv.id}><div className="invoice-avatar">{(inv.customerName||'?')[0].toUpperCase()}</div><div className="invoice-main"><strong>{inv.customerName}</strong><span>{inv.invoiceNo} • {inv.date}</span></div><StatusBadge status={inv.status}/><strong className="invoice-amount">{money(inv.total)}</strong></div>)}</div> : <EmptyState title="No invoices yet" text="Create your first premium invoice." action={<button className="primary-btn" onClick={()=>setView('invoice')}>Create Invoice</button>} />}
+        {latest.length ? <div className="invoice-list">{latest.map(inv => <div className="invoice-list-row" key={inv.id}><div className="invoice-avatar">{(inv.customerName||'?')[0].toUpperCase()}</div><div className="invoice-main"><strong>{inv.customerName}</strong><span>{inv.invoiceNo} • {inv.date}</span></div><strong className="invoice-amount">{money(inv.total)}</strong></div>)}</div> : <EmptyState title="No invoices yet" text="Create your first premium invoice." action={<button className="primary-btn" onClick={()=>setView('invoice')}>Create Invoice</button>} />}
       </Card>
       <Card className="section-card quick-card">
         <div className="section-head"><div><span className="eyebrow">QUICK CONTROL</span><h2>Workspace shortcuts</h2></div><span className="ready-chip"><i/> READY</span></div>
@@ -235,16 +236,12 @@ function InvoiceEditor({ invoice, setInvoice, parts, settings, invoices, onSave,
       <div className="invoice-workspace">
         <Card className="form-card">
           <div className="section-head"><div><span className="eyebrow">01 • CUSTOMER</span><h2>Billing details</h2></div><span className="save-state"><i/> Draft autosaved</span></div>
-          <div className="form-grid cols-4">
+          <div className="form-grid cols-3">
             <Field label="Customer Name *"><input value={invoice.customerName} onChange={e=>setInvoice({...invoice,customerName:e.target.value})} placeholder="Enter customer name" /></Field>
             <Field label="Mobile"><input value={invoice.phone} onChange={e=>setInvoice({...invoice,phone:e.target.value})} placeholder="Mobile number" inputMode="tel" /></Field>
             <Field label="Invoice Date"><input type="date" value={invoice.date} onChange={e=>setInvoice({...invoice,date:e.target.value})}/></Field>
-            <Field label="Due Date"><input type="date" value={invoice.dueDate} onChange={e=>setInvoice({...invoice,dueDate:e.target.value})}/></Field>
           </div>
-          <div className="form-grid cols-2 mt-16">
-            <Field label="Address / Site"><input value={invoice.address} onChange={e=>setInvoice({...invoice,address:e.target.value})} placeholder="Area, city or site" /></Field>
-            <Field label="Payment Status"><select value={invoice.status} onChange={e=>setInvoice({...invoice,status:e.target.value})}><option>Unpaid</option><option>Paid</option><option>Part Paid</option></select></Field>
-          </div>
+          <Field label="Address / Site" className="mt-16"><input value={invoice.address} onChange={e=>setInvoice({...invoice,address:e.target.value})} placeholder="Area, city or site" /></Field>
         </Card>
 
         <Card className="form-card items-card">
@@ -300,12 +297,83 @@ function Field({ label, children, className='' }) { return <label className={`fi
 function Modal({ title, children, onClose }) { return <motion.div className="modal-backdrop" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} onMouseDown={onClose}><motion.div className="modal" initial={{opacity:0,scale:.96,y:12}} animate={{opacity:1,scale:1,y:0}} exit={{opacity:0,scale:.97}} onMouseDown={e=>e.stopPropagation()}><div className="modal-head"><h3>{title}</h3><button className="icon-btn" onClick={onClose}><X size={20}/></button></div>{children}</motion.div></motion.div> }
 
 function InvoicesPage({ invoices, onEdit, onDelete }) {
-  const [q,setQ]=useState(''); const [status,setStatus]=useState('All')
-  const rows = useMemo(()=>invoices.filter(i => { const hay=`${i.invoiceNo} ${i.customerName} ${i.phone}`.toLowerCase(); return hay.includes(q.toLowerCase()) && (status==='All'||i.status===status) }).sort((a,b)=>String(b.savedAt||'').localeCompare(String(a.savedAt||''))),[invoices,q,status])
-  return <motion.div className="page" initial={{opacity:0,y:12}} animate={{opacity:1,y:0}}><PageHeader eyebrow="BILLING RECORDS" title="Invoices" text="Search, reopen and manage every saved bill." />
-    <Card className="table-card"><div className="toolbar"><div className="search-box simple"><Search size={19}/><input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search invoice, customer or mobile..."/></div><select className="filter-select" value={status} onChange={e=>setStatus(e.target.value)}><option>All</option><option>Unpaid</option><option>Paid</option><option>Part Paid</option></select></div>
-      {rows.length ? <div className="responsive-table"><div className="rt-head"><span>INVOICE</span><span>CUSTOMER</span><span>DATE</span><span>STATUS</span><span>AMOUNT</span><span/></div>{rows.map(inv=><div className="rt-row" key={inv.id}><div data-label="Invoice"><strong>{inv.invoiceNo}</strong><small>{inv.referenceNo || 'Saved invoice'}</small></div><div data-label="Customer"><strong>{inv.customerName}</strong><small>{inv.phone || 'No mobile'}</small></div><div data-label="Date"><strong>{inv.date}</strong><small>Due {inv.dueDate}</small></div><div data-label="Status"><StatusBadge status={inv.status}/></div><div className="rt-amount" data-label="Amount">{money(inv.total)}</div><div className="row-actions"><button onClick={()=>onEdit(inv)} title="Edit"><Pencil size={17}/></button><button onClick={()=>downloadInvoicePdf(inv, storage.getSettings())} title="PDF"><FileDown size={17}/></button><button className="danger" onClick={()=>onDelete(inv.id)} title="Delete"><Trash2 size={17}/></button></div></div>)}</div> : <EmptyState title="No matching invoices" text="Saved invoices will appear here."/>}
-    </Card></motion.div>
+  const [q,setQ]=useState('')
+
+  const rows = useMemo(
+    () => invoices
+      .filter(i => {
+        const hay = `${i.invoiceNo} ${i.customerName} ${i.phone}`.toLowerCase()
+        return hay.includes(q.toLowerCase())
+      })
+      .sort((a,b)=>String(b.savedAt||'').localeCompare(String(a.savedAt||''))),
+    [invoices,q]
+  )
+
+  return <motion.div className="page" initial={{opacity:0,y:12}} animate={{opacity:1,y:0}}>
+    <PageHeader eyebrow="BILLING RECORDS" title="Invoices" text="Search, reopen and manage every saved bill." />
+
+    <Card className="table-card">
+      <div className="toolbar">
+        <div className="search-box simple">
+          <Search size={19}/>
+          <input
+            value={q}
+            onChange={e=>setQ(e.target.value)}
+            placeholder="Search invoice, customer or mobile..."
+          />
+        </div>
+      </div>
+
+      {rows.length
+        ? <div className="responsive-table simple-invoice-table">
+            <div className="rt-head">
+              <span>INVOICE</span>
+              <span>CUSTOMER</span>
+              <span>DATE</span>
+              <span>AMOUNT</span>
+              <span/>
+            </div>
+
+            {rows.map(inv=>
+              <div className="rt-row" key={inv.id}>
+                <div data-label="Invoice">
+                  <strong>{inv.invoiceNo}</strong>
+                  <small>{inv.referenceNo || 'Saved invoice'}</small>
+                </div>
+
+                <div data-label="Customer">
+                  <strong>{inv.customerName}</strong>
+                  <small>{inv.phone || 'No mobile'}</small>
+                </div>
+
+                <div data-label="Date">
+                  <strong>{inv.date}</strong>
+                </div>
+
+                <div className="rt-amount" data-label="Amount">
+                  {money(inv.total)}
+                </div>
+
+                <div className="row-actions">
+                  <button onClick={()=>onEdit(inv)} title="Edit">
+                    <Pencil size={17}/>
+                  </button>
+
+                  <button onClick={()=>downloadInvoicePdf(inv, storage.getSettings())} title="PDF">
+                    <FileDown size={17}/>
+                  </button>
+
+                  <button className="danger" onClick={()=>onDelete(inv.id)} title="Delete">
+                    <Trash2 size={17}/>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        : <EmptyState title="No matching invoices" text="Saved invoices will appear here."/>
+      }
+    </Card>
+  </motion.div>
 }
 
 function CustomersPage({ invoices }) {
@@ -341,7 +409,7 @@ function SettingsPage({ settings, setSettings, showToast, onImport }) {
           <div className="form-grid cols-2 mt-24"><Field label="Business Name"><div className="input-icon"><Building2 size={18}/><input value={draft.businessName} onChange={e=>patch({businessName:e.target.value})}/></div></Field><Field label="Phone"><div className="input-icon"><Phone size={18}/><input value={draft.phone} onChange={e=>patch({phone:e.target.value})}/></div></Field></div>
           <Field label="Business Address" className="mt-16"><div className="input-icon"><MapPin size={18}/><input value={draft.address} onChange={e=>patch({address:e.target.value})}/></div></Field>
         </Card>
-        <Card className="form-card"><div className="section-head"><div><span className="eyebrow">INVOICE</span><h2>Billing preferences</h2></div></div><div className="form-grid cols-2"><Field label="Invoice Prefix"><input value={draft.invoicePrefix} onChange={e=>patch({invoicePrefix:e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g,'')})}/></Field><Field label="Default Due Days"><input type="number" min="0" value={draft.dueDays} onChange={e=>patch({dueDays:Number(e.target.value)})}/></Field></div><Field label="PAN No. (Optional)" className="mt-16"><input value={draft.pan || ''} placeholder="Enter PAN number" onChange={e=>patch({pan:e.target.value.toUpperCase()})}/></Field><Field label="Payment Details" className="mt-16"><div className="input-icon textarea-icon"><CreditCard size={18}/><textarea rows="3" value={draft.paymentDetails} onChange={e=>patch({paymentDetails:e.target.value})} placeholder="UPI, bank or payment instructions"/></div></Field><Field label="PDF Footer Note" className="mt-16"><textarea rows="2" value={draft.footerNote} onChange={e=>patch({footerNote:e.target.value})}/></Field></Card>
+        <Card className="form-card"><div className="section-head"><div><span className="eyebrow">INVOICE</span><h2>Invoice settings</h2></div></div><Field label="Invoice Prefix"><input value={draft.invoicePrefix} onChange={e=>patch({invoicePrefix:e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g,'')})}/></Field><Field label="PAN No. (Optional)" className="mt-16"><input value={draft.pan || ''} placeholder="Enter PAN number" onChange={e=>patch({pan:e.target.value.toUpperCase()})}/></Field><Field label="PDF Footer Note" className="mt-16"><textarea rows="2" value={draft.footerNote} onChange={e=>patch({footerNote:e.target.value})}/></Field></Card>
         <Card className="form-card"><div className="section-head"><div><span className="eyebrow">DATA</span><h2>Backup & restore</h2></div></div><p className="muted-copy">Export a JSON backup before moving the software to another device.</p><div className="backup-actions"><button className="secondary-btn" onClick={()=>{const blob=new Blob([JSON.stringify(storage.exportAll(),null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`smart-billing-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href)}}><Download size={18}/> Export Backup</button><button className="secondary-btn" onClick={()=>importRef.current?.click()}><Upload size={18}/> Import Backup</button><input ref={importRef} hidden type="file" accept="application/json" onChange={e=>onImport(e.target.files?.[0])}/></div></Card>
       </div>
       <aside className="settings-preview"><Card className="brand-preview-card"><span className="eyebrow">LIVE PREVIEW</span><LogoMark settings={draft} size="xl"/><strong>{draft.businessName||'Business Name'}</strong><span>{draft.phone||'Phone number'}</span><small>{draft.address||'Business address'}</small><div className="mini-invoice"><div><span>INVOICE</span><strong>{draft.invoicePrefix||'INV'}-0001</strong></div><div className="mini-line"/><div className="mini-line short"/><div className="mini-total"><span>Grand Total</span><strong>₹12,450.00</strong></div></div></Card></aside>

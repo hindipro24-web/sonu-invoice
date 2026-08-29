@@ -233,3 +233,24 @@ img,svg{max-width:100%}
   }
 }
 
+
+
+/* Simple invoice history - no payment status */
+.simple-invoice-table .rt-head,
+.simple-invoice-table .rt-row {
+  grid-template-columns:1fr 1.45fr .8fr .85fr 110px;
+}
+
+.invoice-list-row {
+  grid-template-columns:42px minmax(0,1fr) auto;
+}
+
+@media(max-width:700px) {
+  .simple-invoice-table .rt-row {
+    grid-template-columns:1fr 1fr;
+  }
+
+  .simple-invoice-table .row-actions {
+    grid-column:1 / 3;
+  }
+}

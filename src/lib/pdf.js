@@ -207,42 +207,6 @@ export function buildInvoicePdf(invoice, settings) {
     doc.text(address, margin, customerY)
   }
 
-  // DATE / STATUS
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(9)
-
-  doc.text(
-    'Due Date',
-    pageW - margin - 45,
-    58
-  )
-
-  doc.setFont('helvetica', 'normal')
-
-  doc.text(
-    invoice.dueDate || '-',
-    pageW - margin,
-    58,
-    { align: 'right' }
-  )
-
-  doc.setFont('helvetica', 'bold')
-
-  doc.text(
-    'Status',
-    pageW - margin - 45,
-    65
-  )
-
-  doc.setFont('helvetica', 'normal')
-
-  doc.text(
-    invoice.status || 'Unpaid',
-    pageW - margin,
-    65,
-    { align: 'right' }
-  )
-
   // ITEMS
   const rows = invoice.items.map((item, i) => [
     String(i + 1),
@@ -451,30 +415,6 @@ export function buildInvoicePdf(invoice, settings) {
 
     detailsY +=
       7 + note.length * 4
-  }
-
-  // PAYMENT DETAILS
-  if (settings.paymentDetails) {
-    doc.setFont('helvetica', 'bold')
-
-    doc.text(
-      'Payment Details',
-      margin,
-      detailsY
-    )
-
-    doc.setFont('helvetica', 'normal')
-
-    const payment = doc.splitTextToSize(
-      settings.paymentDetails,
-      95
-    )
-
-    doc.text(
-      payment,
-      margin,
-      detailsY + 5
-    )
   }
 
   // AUTHORIZED SIGNATURE
