@@ -1,163 +1,146 @@
 (() => {
   'use strict';
   const $ = (id) => document.getElementById(id);
-  const $$ = (sel) => [...document.querySelectorAll(sel)];
-  const KEYS = { settings:'invoicePro.settings.v1', invoices:'invoicePro.invoices.v1', counter:'invoicePro.counter.v1', draft:'invoicePro.draft.v1' };
-  const CATALOG = Array.isArray(window.PARTS_CATALOG) ? window.PARTS_CATALOG : [];
-
-  const DEFAULT_SETTINGS = {
-    businessName:'SONU FABRICATION', businessPhone:'', businessAddress:'', paymentDetails:'', invoicePrefix:'INV', footerNote:'Computer generated non-GST invoice.'
-  };
-  let settings = loadJSON(KEYS.settings, DEFAULT_SETTINGS);
+  const STORAGE = {settings:'spb_settings_v2', invoices:'spb_invoices_v2', counter:'spb_counter_v2'};
+  const defaults = {businessName:'SONU FABRICATION',businessPhone:'',businessAddress:'',invoicePrefix:'INV',footerNote:'Thank you for your business.',paymentDetails:''};
+  let settings = load(STORAGE.settings, defaults);
+  let invoices = load(STORAGE.invoices, []);
   let items = [];
-  let previewUrl = null;
+  let editingId = null;
+  let toastTimer = null;
 
-  function loadJSON(key, fallback){ try { const v=JSON.parse(localStorage.getItem(key)); return v ?? fallback; } catch { return fallback; } }
-  function saveJSON(key, value){ localStorage.setItem(key, JSON.stringify(value)); }
+  function load(key, fallback){ try{const raw=localStorage.getItem(key); return raw?JSON.parse(raw):structuredClone(fallback);}catch{return structuredClone(fallback);} }
+  function save(key,val){ localStorage.setItem(key,JSON.stringify(val)); }
   function money(n){ return new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',minimumFractionDigits:2}).format(Number(n)||0); }
-  function safe(n){ return Number.isFinite(Number(n)) ? Number(n) : 0; }
-  function today(){ const d=new Date(); const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; }
-  function uid(){ return (crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`); }
-  function toast(msg){ const el=$('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(toast.t); toast.t=setTimeout(()=>el.classList.remove('show'),2200); }
-  function esc(s=''){ return String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
+  function num(v){ const n=parseFloat(v); return Number.isFinite(n)?n:0; }
+  function today(){ const d=new Date(); return d.toISOString().slice(0,10); }
+  function safe(s){ return String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
+  function toast(msg){ clearTimeout(toastTimer); const t=$('toast'); t.textContent=msg; t.classList.add('show'); toastTimer=setTimeout(()=>t.classList.remove('show'),2600); }
+  function nextNumber(){ let c=parseInt(localStorage.getItem(STORAGE.counter)||'1',10); if(!Number.isFinite(c)||c<1)c=1; return `${(settings.invoicePrefix||'INV').toUpperCase()}-${String(c).padStart(4,'0')}`; }
+  function advanceCounter(){ const n=parseInt(localStorage.getItem(STORAGE.counter)||'1',10)||1; localStorage.setItem(STORAGE.counter,String(n+1)); }
+  function currentInvoiceNo(){ return editingId ? (invoices.find(x=>x.id===editingId)?.invoiceNo || nextNumber()) : nextNumber(); }
 
-  function nextInvoiceNo(increment=false){
-    let counter=parseInt(localStorage.getItem(KEYS.counter)||'1',10); if(!Number.isFinite(counter)||counter<1) counter=1;
-    const no=`${(settings.invoicePrefix||'INV').toUpperCase()}-${String(counter).padStart(4,'0')}`;
-    if(increment) localStorage.setItem(KEYS.counter,String(counter+1));
-    return no;
+  function switchView(name){
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active-view'));
+    document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===name));
+    const map={new:'newView',history:'historyView',catalog:'catalogView'}; $(map[name]).classList.add('active-view');
+    if(name==='history') renderHistory(); if(name==='catalog') renderCatalog(); window.scrollTo({top:0,behavior:'smooth'});
   }
+  document.querySelectorAll('[data-view]').forEach(el=>el.addEventListener('click',()=>switchView(el.dataset.view)));
+  $('historyNewBtn').onclick=()=>{newBill();switchView('new')}; $('catalogNewBtn').onclick=()=>switchView('new');
 
-  function setView(id){
-    $$('.view').forEach(v=>v.classList.toggle('active',v.id===id));
-    $$('.nav-item').forEach(b=>b.classList.toggle('active',b.dataset.view===id));
-    const meta={invoiceView:['Create Invoice','Professional non-GST invoice builder'],historyView:['Invoice History','Saved invoices on this device'],catalogView:['Parts Catalog','Search the SONU FABRICATION rate list'],settingsView:['Settings','Business profile and invoice preferences']}[id];
-    $('pageTitle').textContent=meta[0]; $('pageSubtitle').textContent=meta[1];
-    $('sidebar').classList.remove('open');
-    if(id==='historyView') renderHistory(); if(id==='catalogView') renderCatalog(); if(id==='settingsView') fillSettingsForm();
-  }
-
-  function newInvoice(confirmClear=false){
-    if(confirmClear && (items.length || $('customerName').value) && !confirm('Start a new invoice? Unsaved changes will be cleared.')) return;
-    items=[]; $('invoiceNo').value=nextInvoiceNo(false); $('invoiceDate').value=today(); $('customerName').value=''; $('customerMobile').value=''; $('customerAddress').value=''; $('invoiceNotes').value='Thank you for your business.'; $('discountInput').value='0'; $('otherChargesInput').value='0';
-    renderItems(); localStorage.removeItem(KEYS.draft); setView('invoiceView');
-  }
-
-  function invoiceData(){
-    const subtotal=items.reduce((s,i)=>s+safe(i.qty)*safe(i.rate),0), discount=Math.max(0,safe($('discountInput').value)), other=Math.max(0,safe($('otherChargesInput').value));
-    return { id:uid(), invoiceNo:$('invoiceNo').value.trim()||nextInvoiceNo(false), date:$('invoiceDate').value||today(), customerName:$('customerName').value.trim(), customerMobile:$('customerMobile').value.trim(), customerAddress:$('customerAddress').value.trim(), notes:$('invoiceNotes').value.trim(), items:items.map(i=>({...i})), subtotal, discount, otherCharges:other, total:Math.max(0,subtotal-discount+other), savedAt:new Date().toISOString() };
-  }
-
-  function autosaveDraft(){ const d=invoiceData(); d.id='draft'; saveJSON(KEYS.draft,d); }
-  function loadDraft(){ const d=loadJSON(KEYS.draft,null); if(!d) return false; applyInvoice(d,false); return true; }
-  function applyInvoice(inv, clone=false){
-    items=(inv.items||[]).map(i=>({...i,id:uid()})); $('invoiceNo').value=clone?nextInvoiceNo(false):(inv.invoiceNo||nextInvoiceNo(false)); $('invoiceDate').value=clone?today():(inv.date||today()); $('customerName').value=inv.customerName||''; $('customerMobile').value=inv.customerMobile||''; $('customerAddress').value=inv.customerAddress||''; $('invoiceNotes').value=inv.notes||'Thank you for your business.'; $('discountInput').value=inv.discount||0; $('otherChargesInput').value=inv.otherCharges||0; renderItems(); setView('invoiceView');
-  }
-
-  function addCatalogItem(part){ items.push({id:uid(),partNo:part.partNo,description:`${part.description}${part.group?' • '+part.group:''}`,qty:1,rate:safe(part.rate)}); $('partSearch').value=''; $('searchResults').classList.add('hidden'); renderItems(); autosaveDraft(); toast('Part added'); }
-  function addCustomItem(){
-    const desc=$('customDescription').value.trim(); if(!desc){ toast('Enter item description'); return false; }
-    items.push({id:uid(),partNo:$('customPartNo').value.trim(),description:desc,qty:Math.max(.01,safe($('customQty').value)||1),rate:Math.max(0,safe($('customRate').value))});
-    $('customPartNo').value=''; $('customDescription').value=''; $('customQty').value='1'; $('customRate').value='0'; renderItems(); autosaveDraft(); toast('Item added'); return true;
-  }
+  function setInvoiceLabels(){ const no=currentInvoiceNo(); $('invoiceNoTop').textContent=no; $('summaryInvoiceNo').textContent=no; }
+  function totals(){ const subtotal=items.reduce((s,i)=>s+(num(i.qty)*num(i.rate)),0); const discount=Math.max(0,num($('discount').value)); const charges=Math.max(0,num($('otherCharges').value)); return {subtotal,discount,charges,total:Math.max(0,subtotal-discount+charges)}; }
+  function updateSummary(){ const t=totals(); $('itemCount').textContent=String(items.length); $('subtotal').textContent=money(t.subtotal); $('discountSummary').textContent=`− ${money(t.discount)}`; $('chargesSummary').textContent=money(t.charges); $('grandTotal').textContent=money(t.total); }
 
   function renderItems(){
-    const body=$('itemsBody'); body.innerHTML=''; $('emptyItems').classList.toggle('hidden',items.length>0);
-    items.forEach((item,idx)=>{
-      const tr=document.createElement('tr');
-      tr.innerHTML=`<td>${idx+1}</td><td><div class="item-main"><b>${esc(item.description)}</b><span>${esc(item.partNo||'Custom item')}</span></div></td><td><div class="stepper"><button data-act="minus" data-id="${item.id}" aria-label="Decrease quantity">−</button><input data-field="qty" data-id="${item.id}" type="number" min="0.01" step="0.01" value="${safe(item.qty)}"><button data-act="plus" data-id="${item.id}" aria-label="Increase quantity">+</button></div></td><td><div class="money-input"><span>₹</span><input data-field="rate" data-id="${item.id}" type="number" min="0" step="0.01" value="${safe(item.rate).toFixed(2)}"></div></td><td class="num amount-cell">${money(safe(item.qty)*safe(item.rate))}</td><td><button class="remove-btn" data-act="remove" data-id="${item.id}" aria-label="Remove item">×</button></td>`;
-      body.appendChild(tr);
+    $('emptyItems').style.display=items.length?'none':'grid';
+    $('itemsList').innerHTML=items.map((it,idx)=>`<div class="item-row" data-index="${idx}">
+      <div class="item-info"><strong>${safe(it.description||'Custom Item')}</strong><span>${safe(it.partNo||'Custom')} • ${safe(it.unit||'')}</span></div>
+      <div class="qty-control"><button data-act="minus" aria-label="Decrease quantity">−</button><input data-field="qty" type="number" min="0.01" step="0.01" value="${it.qty}"><button data-act="plus" aria-label="Increase quantity">+</button></div>
+      <input class="rate-input" data-field="rate" type="number" min="0" step="0.01" value="${it.rate}">
+      <div class="amount">${money(num(it.qty)*num(it.rate))}</div>
+      <button class="remove-btn" data-act="remove" aria-label="Remove item">×</button>
+    </div>`).join('');
+    updateSummary();
+  }
+  $('itemsList').addEventListener('click',e=>{ const row=e.target.closest('.item-row'); if(!row)return; const idx=+row.dataset.index; const act=e.target.dataset.act; if(act==='plus'){items[idx].qty=num(items[idx].qty)+1} if(act==='minus'){items[idx].qty=Math.max(.01,num(items[idx].qty)-1)} if(act==='remove'){items.splice(idx,1)} renderItems(); });
+  $('itemsList').addEventListener('input',e=>{ const row=e.target.closest('.item-row'); if(!row)return; const idx=+row.dataset.index; const f=e.target.dataset.field; if(f){items[idx][f]=num(e.target.value); const amount=row.querySelector('.amount'); amount.textContent=money(num(items[idx].qty)*num(items[idx].rate)); updateSummary();} });
+  ['discount','otherCharges'].forEach(id=>$(id).addEventListener('input',updateSummary));
+
+  const searchInput=$('partSearch'), results=$('partResults');
+  function searchParts(q){ const term=q.trim().toLowerCase(); if(!term)return PARTS.slice(0,8); return PARTS.filter(p=>`${p.partNo} ${p.description} ${p.unit}`.toLowerCase().includes(term)).slice(0,12); }
+  function showResults(){ const list=searchParts(searchInput.value); results.innerHTML=list.length?list.map(p=>`<button class="result-row" data-id="${p.id}"><span class="result-main"><strong>${safe(p.partNo)}</strong><span>${safe(p.description)} • ${safe(p.unit)}</span></span><span class="result-rate"><strong>${money(p.rate)}</strong><span>rate</span></span></button>`).join(''):'<div class="no-results">Part nahi mila. “+ Custom” se add karo.</div>'; results.hidden=false; }
+  searchInput.addEventListener('focus',showResults); searchInput.addEventListener('input',showResults);
+  results.addEventListener('click',e=>{ const b=e.target.closest('[data-id]'); if(!b)return; const p=PARTS.find(x=>x.id===+b.dataset.id); if(p)addPart(p); });
+  document.addEventListener('click',e=>{if(!e.target.closest('.part-search-wrap'))results.hidden=true;});
+  function addPart(p){ const existing=items.find(i=>i.partNo===p.partNo && i.unit===p.unit && i.rate===p.rate); if(existing)existing.qty=num(existing.qty)+1; else items.push({...p,qty:1}); renderItems(); searchInput.value=''; results.hidden=true; toast('Part added'); }
+
+  function openModal(id){ $(id).hidden=false; document.body.style.overflow='hidden'; }
+  function closeModal(id){ $(id).hidden=true; document.body.style.overflow=''; }
+  $('settingsBtn').onclick=()=>{fillSettings();openModal('settingsModal')}; document.querySelectorAll('[data-close-modal]').forEach(x=>x.onclick=()=>closeModal('settingsModal'));
+  $('customItemBtn').onclick=()=>openModal('customModal'); document.querySelectorAll('[data-close-custom]').forEach(x=>x.onclick=()=>closeModal('customModal'));
+  $('addCustomBtn').onclick=()=>{ const desc=$('customDescription').value.trim(); if(!desc){toast('Description enter karo');return;} items.push({id:`custom-${Date.now()}`,partNo:$('customPartNo').value.trim()||'CUSTOM',description:desc,unit:'',qty:Math.max(.01,num($('customQty').value)||1),rate:Math.max(0,num($('customRate').value))}); renderItems(); closeModal('customModal'); $('customPartNo').value=''; $('customDescription').value=''; $('customQty').value='1'; $('customRate').value='0'; toast('Custom item added'); };
+  function fillSettings(){ $('businessName').value=settings.businessName||''; $('businessPhone').value=settings.businessPhone||''; $('businessAddress').value=settings.businessAddress||''; $('invoicePrefix').value=settings.invoicePrefix||'INV'; $('footerNote').value=settings.footerNote||''; $('paymentDetails').value=settings.paymentDetails||''; }
+  $('saveSettingsBtn').onclick=()=>{ settings={businessName:$('businessName').value.trim()||'My Business',businessPhone:$('businessPhone').value.trim(),businessAddress:$('businessAddress').value.trim(),invoicePrefix:($('invoicePrefix').value.trim()||'INV').toUpperCase().replace(/[^A-Z0-9-]/g,''),footerNote:$('footerNote').value.trim(),paymentDetails:$('paymentDetails').value.trim()}; save(STORAGE.settings,settings); setInvoiceLabels(); closeModal('settingsModal'); toast('Settings saved'); };
+
+  function collect(){ const t=totals(); return {id:editingId||`bill_${Date.now()}`,invoiceNo:currentInvoiceNo(),date:$('invoiceDate').value||today(),customer:{name:$('customerName').value.trim(),phone:$('customerPhone').value.trim(),address:$('customerAddress').value.trim()},items:items.map(x=>({...x,qty:num(x.qty),rate:num(x.rate)})),discount:t.discount,otherCharges:t.charges,paymentStatus:$('paymentStatus').value,note:$('invoiceNote').value.trim(),subtotal:t.subtotal,total:t.total,createdAt:new Date().toISOString()}; }
+  function validate(inv){ if(!inv.customer.name){toast('Customer name enter karo');$('customerName').focus();return false;} if(!inv.items.length){toast('Kam se kam 1 part add karo');searchInput.focus();return false;} return true; }
+  function saveInvoice(silent=false){ const inv=collect(); if(!validate(inv))return null; const idx=invoices.findIndex(x=>x.id===inv.id); if(idx>=0)invoices[idx]=inv; else {invoices.unshift(inv); advanceCounter(); editingId=inv.id;} save(STORAGE.invoices,invoices); setInvoiceLabels(); if(!silent)toast('Bill saved ✓'); return inv; }
+  $('saveBtn').onclick=()=>saveInvoice();
+
+  function newBill(){ editingId=null; items=[]; $('customerName').value=''; $('customerPhone').value=''; $('customerAddress').value=''; $('invoiceDate').value=today(); $('discount').value='0'; $('otherCharges').value='0'; $('paymentStatus').value='Unpaid'; $('invoiceNote').value=''; renderItems(); setInvoiceLabels(); }
+  $('newBillBtn').onclick=()=>{newBill();toast('New bill ready')};
+
+  function loadInvoice(id){ const inv=invoices.find(x=>x.id===id); if(!inv)return; editingId=id; $('customerName').value=inv.customer?.name||''; $('customerPhone').value=inv.customer?.phone||''; $('customerAddress').value=inv.customer?.address||''; $('invoiceDate').value=inv.date||today(); $('discount').value=inv.discount||0; $('otherCharges').value=inv.otherCharges||0; $('paymentStatus').value=inv.paymentStatus||'Unpaid'; $('invoiceNote').value=inv.note||''; items=(inv.items||[]).map(x=>({...x})); renderItems(); setInvoiceLabels(); switchView('new'); toast('Saved bill opened'); }
+
+  function renderHistory(){ const q=$('historySearch').value.trim().toLowerCase(); const list=invoices.filter(i=>`${i.invoiceNo} ${i.customer?.name||''} ${i.customer?.phone||''}`.toLowerCase().includes(q)); $('emptyHistory').style.display=list.length?'none':'grid'; $('historyList').innerHTML=list.map(i=>`<div class="history-row" data-id="${i.id}"><div><strong>${safe(i.invoiceNo)}</strong><span>${safe(i.date)}</span></div><div><strong>${safe(i.customer?.name||'—')}</strong><span>${safe(i.customer?.phone||'')}</span></div><div><strong>${safe(i.paymentStatus||'Unpaid')}</strong><span>${i.items?.length||0} items</span></div><div><strong class="history-amount">${money(i.total)}</strong></div><div class="history-actions"><button class="tiny-btn" data-act="open">Open</button><button class="tiny-btn" data-act="pdf">PDF</button><button class="tiny-btn danger" data-act="delete">Delete</button></div></div>`).join(''); }
+  $('historySearch').addEventListener('input',renderHistory);
+  $('historyList').addEventListener('click',async e=>{ const row=e.target.closest('.history-row'); if(!row)return; const id=row.dataset.id, act=e.target.dataset.act; if(act==='open')loadInvoice(id); if(act==='delete'){if(confirm('Is bill ko delete karna hai?')){invoices=invoices.filter(x=>x.id!==id);save(STORAGE.invoices,invoices);renderHistory();toast('Bill deleted');}} if(act==='pdf'){const inv=invoices.find(x=>x.id===id);if(inv)downloadPDF(inv);} });
+  $('exportBackupBtn').onclick=()=>{ const blob=new Blob([JSON.stringify({version:2,exportedAt:new Date().toISOString(),settings,invoices},null,2)],{type:'application/json'}); downloadBlob(blob,`smart-parts-backup-${today()}.json`); toast('Backup exported'); };
+
+  function renderCatalog(){ const q=$('catalogSearch').value.trim().toLowerCase(); const list=PARTS.filter(p=>`${p.partNo} ${p.description} ${p.unit}`.toLowerCase().includes(q)); $('catalogList').innerHTML=list.map(p=>`<div class="catalog-row"><div><strong>${safe(p.partNo)}</strong><span>${safe(p.description)} • ${safe(p.unit)}</span></div><div style="text-align:right"><div class="catalog-rate">${money(p.rate)}</div><button class="catalog-add" data-id="${p.id}">ADD TO BILL</button></div></div>`).join(''); }
+  $('catalogSearch').addEventListener('input',renderCatalog); $('catalogList').addEventListener('click',e=>{const b=e.target.closest('[data-id]');if(!b)return;const p=PARTS.find(x=>x.id===+b.dataset.id);addPart(p);switchView('new');});
+
+  // --- Minimal client-side PDF generator (no external library) ---
+  function pdfEscape(s){ return String(s??'').replace(/\\/g,'\\\\').replace(/\(/g,'\\(').replace(/\)/g,'\\)').replace(/[\r\n]+/g,' '); }
+  const widths={ '0':556,'1':556,'2':556,'3':556,'4':556,'5':556,'6':556,'7':556,'8':556,'9':556,'.':278,',':278,'-':333,' ':278,'R':722,'s':500};
+  function textWidth(txt,size,bold=false){ let u=0; for(const ch of String(txt)){ if(widths[ch]!=null)u+=widths[ch]; else if(/[A-Z]/.test(ch))u+=bold?690:667; else if(/[a-z]/.test(ch))u+=bold?540:500; else u+=500;} return u/1000*size; }
+  function makePDF(inv){
+    const W=595.28,H=841.89,M=42; const pages=[]; let cmds=[],y=0;
+    const c={brand:'0.067 0.247 0.404',ink:'0.10 0.15 0.19',muted:'0.42 0.47 0.52',line:'0.87 0.89 0.91',light:'0.96 0.98 0.99',green:'0.08 0.52 0.37'};
+    const line=(x1,y1,x2,y2,color=c.line,w=.7)=>cmds.push(`${color} RG ${w} w ${x1.toFixed(2)} ${y1.toFixed(2)} m ${x2.toFixed(2)} ${y2.toFixed(2)} l S`);
+    const rect=(x,y,w,h,fill,stroke=null)=>{ if(fill)cmds.push(`${fill} rg ${x} ${y} ${w} ${h} re f`); if(stroke)cmds.push(`${stroke} RG ${x} ${y} ${w} ${h} re S`); };
+    const txt=(s,x,y,size=10,bold=false,color=c.ink,align='left',rightX=null)=>{ s=pdfEscape(s); let xx=x; if(align==='right'){ const end=rightX??x; xx=end-textWidth(s,size,bold);} if(align==='center')xx=x-textWidth(s,size,bold)/2; cmds.push(`BT ${color} rg /${bold?'F2':'F1'} ${size} Tf 1 0 0 1 ${xx.toFixed(2)} ${y.toFixed(2)} Tm (${s}) Tj ET`); };
+    const wrap=(s,maxChars)=>{ const words=String(s||'').split(/\s+/); const out=[]; let cur=''; for(const w of words){if(!w)continue; if((cur+' '+w).trim().length>maxChars){if(cur)out.push(cur);cur=w}else cur=(cur+' '+w).trim()} if(cur)out.push(cur); return out.length?out:['']; };
+    function header(first=true){
+      rect(0,H-112,W,112,c.brand); txt((settings.businessName||'SMART PARTS BILLING').toUpperCase(),M,H-55,19,true,'1 1 1');
+      const addr=[settings.businessAddress,settings.businessPhone].filter(Boolean).join(' • '); if(addr)txt(addr,M,H-75,8,false,'0.82 0.89 0.94');
+      txt('INVOICE',W-M,H-50,21,true,'1 1 1','right',W-M); txt('NON-GST',W-M,H-70,8,true,'0.74 0.87 0.95','right',W-M);
+      y=H-145;
+      txt('BILL TO',M,y,8,true,c.muted); txt('INVOICE DETAILS',335,y,8,true,c.muted); y-=18;
+      txt(inv.customer.name||'Customer',M,y,12,true,c.ink); txt(`Invoice No: ${inv.invoiceNo}`,335,y,9,true,c.ink); y-=15;
+      if(inv.customer.phone){txt(inv.customer.phone,M,y,9,false,c.ink);} txt(`Date: ${inv.date}`,335,y,9,false,c.ink); y-=14;
+      if(inv.customer.address){wrap(inv.customer.address,44).slice(0,2).forEach(a=>{txt(a,M,y,8,false,c.muted);y-=11;});}
+      y-=10; tableHeader();
+    }
+    function tableHeader(){ const top=y; rect(M,top-24,W-2*M,24,c.light); txt('S.NO',M+8,top-16,8,true,c.muted); txt('PART / DESCRIPTION',M+50,top-16,8,true,c.muted); txt('QTY',386,top-16,8,true,c.muted,'right',410); txt('RATE',448,top-16,8,true,c.muted,'right',475); txt('AMOUNT',W-M,top-16,8,true,c.muted,'right',W-M-6); line(M,top-24,W-M,top-24,c.line,.7); y=top-31; }
+    function newPage(){ pages.push(cmds.join('\n')); cmds=[]; header(false); }
+    header();
+    inv.items.forEach((it,idx)=>{
+      const descLines=wrap(`${it.partNo||''}  ${it.description||''}`,42).slice(0,2); const rh=descLines.length>1?32:25; if(y-rh<150)newPage();
+      txt(String(idx+1),M+9,y-12,8,false,c.ink); txt(descLines[0],M+50,y-12,8.5,true,c.ink); if(descLines[1])txt(descLines[1],M+50,y-23,7.5,false,c.muted);
+      const qty=Number(it.qty||0).toFixed(Number(it.qty)%1?2:0); const rate=Number(it.rate||0).toFixed(2); const amount=(Number(it.qty||0)*Number(it.rate||0)).toFixed(2);
+      txt(qty,410,y-12,8.5,false,c.ink,'right',410); txt(rate,475,y-12,8.5,false,c.ink,'right',475); txt(amount,W-M-6,y-12,8.5,true,c.ink,'right',W-M-6);
+      line(M,y-rh,W-M,y-rh,c.line,.55); y-=rh;
     });
-    updateTotals();
+    if(y<205)newPage();
+    const t={subtotal:inv.subtotal??inv.items.reduce((s,i)=>s+num(i.qty)*num(i.rate),0),discount:inv.discount||0,charges:inv.otherCharges||0,total:inv.total};
+    const bx=330,bw=W-M-bx; y-=12; txt('Subtotal',bx,y,9,false,c.muted); txt(`Rs. ${Number(t.subtotal).toFixed(2)}`,W-M,y,9,true,c.ink,'right',W-M); y-=20;
+    txt('Discount',bx,y,9,false,c.muted); txt(`Rs. ${Number(t.discount).toFixed(2)}`,W-M,y,9,true,c.ink,'right',W-M); y-=20;
+    txt('Other charges',bx,y,9,false,c.muted); txt(`Rs. ${Number(t.charges).toFixed(2)}`,W-M,y,9,true,c.ink,'right',W-M); y-=8; line(bx,y,W-M,y,c.line,.8); y-=25;
+    txt('GRAND TOTAL',bx,y,10,true,c.brand); txt(`Rs. ${Number(t.total||0).toFixed(2)}`,W-M,y,14,true,c.brand,'right',W-M); y-=28;
+    if(inv.note){txt('Note:',M,y,8,true,c.muted); wrap(inv.note,70).slice(0,3).forEach((s,k)=>txt(s,M,y-13-(k*11),8,false,c.ink));}
+    const footY=56; line(M,footY+22,W-M,footY+22,c.line,.7); txt(settings.footerNote||'Thank you for your business.',M,footY,8,false,c.muted); txt(`Payment: ${inv.paymentStatus||'Unpaid'}`,W-M,footY,8,true,inv.paymentStatus==='Paid'?c.green:c.muted,'right',W-M);
+    if(settings.paymentDetails)txt(settings.paymentDetails,M,footY-14,7.5,false,c.muted);
+    pages.push(cmds.join('\n'));
+
+    const objs=[]; const add=o=>{objs.push(o);return objs.length};
+    const catalog=add(''); const pagesObj=add(''); const f1=add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>'); const f2=add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>');
+    const pageIds=[];
+    for(const content of pages){ const stream=add(`<< /Length ${new TextEncoder().encode(content).length} >>\nstream\n${content}\nendstream`); const p=add(`<< /Type /Page /Parent ${pagesObj} 0 R /MediaBox [0 0 ${W} ${H}] /Resources << /Font << /F1 ${f1} 0 R /F2 ${f2} 0 R >> >> /Contents ${stream} 0 R >>`); pageIds.push(p); }
+    objs[catalog-1]=`<< /Type /Catalog /Pages ${pagesObj} 0 R >>`; objs[pagesObj-1]=`<< /Type /Pages /Kids [${pageIds.map(id=>`${id} 0 R`).join(' ')}] /Count ${pageIds.length} >>`;
+    let out='%PDF-1.4\n%SPB\n', offsets=[0]; for(let i=0;i<objs.length;i++){ offsets[i+1]=new TextEncoder().encode(out).length; out+=`${i+1} 0 obj\n${objs[i]}\nendobj\n`; } const xref=new TextEncoder().encode(out).length; out+=`xref\n0 ${objs.length+1}\n0000000000 65535 f \n`; for(let i=1;i<=objs.length;i++)out+=`${String(offsets[i]).padStart(10,'0')} 00000 n \n`; out+=`trailer\n<< /Size ${objs.length+1} /Root ${catalog} 0 R >>\nstartxref\n${xref}\n%%EOF`;
+    return new Blob([new TextEncoder().encode(out)],{type:'application/pdf'});
   }
+  function downloadBlob(blob,name){ const u=URL.createObjectURL(blob); const a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1500); }
+  function fileName(inv){ return `${(inv.invoiceNo||'invoice').replace(/[^a-z0-9-_]/gi,'-')}-${(inv.customer.name||'customer').replace(/[^a-z0-9-_]/gi,'-')}.pdf`; }
+  function downloadPDF(inv){ const blob=makePDF(inv); downloadBlob(blob,fileName(inv)); }
+  $('downloadBtn').onclick=()=>{ const inv=saveInvoice(true); if(inv){downloadPDF(inv);toast('PDF downloaded');} };
+  $('previewBtn').onclick=()=>{ const inv=collect(); if(!validate(inv))return; const url=URL.createObjectURL(makePDF(inv)); window.open(url,'_blank','noopener'); setTimeout(()=>URL.revokeObjectURL(url),60000); };
+  $('shareBtn').onclick=async()=>{ const inv=saveInvoice(true); if(!inv)return; const blob=makePDF(inv), file=new File([blob],fileName(inv),{type:'application/pdf'}); try{ if(navigator.share && (!navigator.canShare || navigator.canShare({files:[file]}))){await navigator.share({title:`Invoice ${inv.invoiceNo}`,text:`Invoice ${inv.invoiceNo} - ${inv.customer.name}`,files:[file]}); toast('PDF shared');}else{downloadBlob(blob,file.name);toast('PDF download hua — WhatsApp me attach karo');} }catch(e){ if(e?.name!=='AbortError'){downloadBlob(blob,file.name);toast('Share unavailable — PDF downloaded');} } };
 
-  function updateTotals(){ const subtotal=items.reduce((s,i)=>s+safe(i.qty)*safe(i.rate),0); const total=Math.max(0,subtotal-Math.max(0,safe($('discountInput').value))+Math.max(0,safe($('otherChargesInput').value))); $('subtotalText').textContent=money(subtotal); $('grandTotalText').textContent=money(total); }
-
-  function searchCatalog(q){ const x=q.trim().toLowerCase(); if(!x) return []; return CATALOG.filter(p=>`${p.partNo} ${p.description} ${p.group} ${p.thickness} ${p.cutting}`.toLowerCase().includes(x)).slice(0,14); }
-  function renderSearchResults(){ const q=$('partSearch').value, res=searchCatalog(q), box=$('searchResults'); if(!q.trim()){box.classList.add('hidden');return;} box.innerHTML=res.length?res.map((p)=>`<button class="search-result" data-sr="${p.sr}"><div><strong>${esc(p.partNo)} — ${esc(p.description)}</strong><span>${esc(p.group)} • ${esc(p.thickness)}mm • Cutting ${esc(p.cutting)}mm</span></div><b>${money(p.rate)}</b></button>`).join(''):'<div class="search-result"><div><strong>No matching part</strong><span>Use “Add Item” for a custom line.</span></div></div>'; box.classList.remove('hidden'); }
-
-  function renderCatalog(filter=''){ const q=filter.trim().toLowerCase(); const arr=CATALOG.filter(p=>!q||`${p.partNo} ${p.description} ${p.group}`.toLowerCase().includes(q)); $('catalogGrid').innerHTML=arr.map(p=>`<article class="catalog-card"><span class="code">${esc(p.partNo)}</span><b>${esc(p.description)}</b><span class="catalog-meta">${esc(p.group)} • THK ${esc(p.thickness)} • Cutting ${esc(p.cutting)}</span><span class="catalog-rate">${money(p.rate)}</span><button class="mini-btn" data-add-sr="${p.sr}">Add to invoice</button></article>`).join(''); }
-
-  function validateInvoice(){ if(!items.length){ toast('Add at least one invoice item'); return false; } if(!$('customerName').value.trim()) toast('Tip: customer name is empty'); return true; }
-
-  function saveInvoice(){
-    if(!validateInvoice()) return;
-    const inv=invoiceData(); const all=loadJSON(KEYS.invoices,[]); const existing=all.findIndex(x=>x.invoiceNo===inv.invoiceNo); if(existing>=0){ inv.id=all[existing].id; all[existing]=inv; } else { all.unshift(inv); if(inv.invoiceNo===nextInvoiceNo(false)) nextInvoiceNo(true); }
-    saveJSON(KEYS.invoices,all.slice(0,500)); localStorage.removeItem(KEYS.draft); toast('Invoice saved'); renderHistory();
-  }
-
-  function renderHistory(){ const q=$('historySearch')?.value?.trim().toLowerCase()||''; const all=loadJSON(KEYS.invoices,[]).filter(i=>!q||`${i.invoiceNo} ${i.customerName} ${i.customerMobile}`.toLowerCase().includes(q)); $('historyList').innerHTML=all.length?all.map(i=>`<div class="history-row"><div><b>${esc(i.invoiceNo)}</b><br><span>${esc(i.customerName||'No customer name')}</span></div><div><b>${esc(i.date)}</b><br><span>${esc(i.customerMobile||'—')}</span></div><div><b>${money(i.total)}</b><br><span>${i.items?.length||0} item(s)</span></div><div class="history-actions"><button class="mini-btn" data-history="open" data-id="${i.id}">Open</button><button class="mini-btn" data-history="pdf" data-id="${i.id}">PDF</button><button class="mini-btn danger" data-history="delete" data-id="${i.id}">Delete</button></div></div>`).join(''):'<div class="empty-items"><b>No saved invoices</b><span>Saved invoices will appear here.</span></div>'; }
-
-  function fillSettingsForm(){ $('businessName').value=settings.businessName||''; $('businessPhone').value=settings.businessPhone||''; $('businessAddress').value=settings.businessAddress||''; $('paymentDetails').value=settings.paymentDetails||''; $('invoicePrefix').value=settings.invoicePrefix||'INV'; $('footerNote').value=settings.footerNote||''; }
-  function applyBrand(){ $('sidebarBusinessName').textContent=settings.businessName||'Invoice Pro'; }
-  function saveSettings(){ settings={businessName:$('businessName').value.trim(),businessPhone:$('businessPhone').value.trim(),businessAddress:$('businessAddress').value.trim(),paymentDetails:$('paymentDetails').value.trim(),invoicePrefix:($('invoicePrefix').value.trim()||'INV').toUpperCase(),footerNote:$('footerNote').value.trim()}; saveJSON(KEYS.settings,settings); applyBrand(); toast('Settings saved'); }
-
-  function createPdf(inv=invoiceData()){
-    if(!window.jspdf?.jsPDF) throw new Error('PDF library did not load. Check internet connection once and reload.');
-    const { jsPDF }=window.jspdf; const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4',compress:true});
-    const W=210, margin=14; const navy=[15,23,42], blue=[37,99,235], muted=[100,116,139], line=[226,232,240];
-    doc.setFillColor(...navy); doc.roundedRect(margin,12,18,18,4,4,'F'); doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.text('SF',23,23.5,{align:'center'});
-    doc.setTextColor(...navy); doc.setFontSize(15); doc.text((settings.businessName||'YOUR BUSINESS NAME').toUpperCase(),36,19); doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(...muted);
-    const address=(settings.businessAddress||'Business address can be added from Settings.'); doc.text(doc.splitTextToSize(address,90),36,24);
-    if(settings.businessPhone) doc.text(`Phone: ${settings.businessPhone}`,36,30);
-    doc.setFont('helvetica','bold'); doc.setFontSize(22); doc.setTextColor(...navy); doc.text('INVOICE',W-margin,20,{align:'right'}); doc.setFontSize(7.5); doc.setTextColor(...blue); doc.text('NON-GST',W-margin,25,{align:'right'});
-    doc.setDrawColor(...line); doc.line(margin,36,W-margin,36);
-
-    doc.setFontSize(7); doc.setTextColor(...muted); doc.setFont('helvetica','bold'); doc.text('BILL TO',margin,44); doc.text('INVOICE DETAILS',131,44);
-    doc.setTextColor(...navy); doc.setFontSize(10); doc.text(inv.customerName||'Customer',margin,50); doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(...muted); let y=55;
-    if(inv.customerMobile){doc.text(`Mobile: ${inv.customerMobile}`,margin,y);y+=4;} if(inv.customerAddress){doc.text(doc.splitTextToSize(inv.customerAddress,95),margin,y);}
-    doc.setTextColor(...navy); doc.setFont('helvetica','normal'); doc.text(`Invoice No: ${inv.invoiceNo}`,131,50); doc.text(`Date: ${inv.date}`,131,55);
-
-    const body=inv.items.map((i,idx)=>[String(idx+1),`${i.description}${i.partNo?`\nPart: ${i.partNo}`:''}`,fmtQty(i.qty),fmtNum(i.rate),fmtNum(safe(i.qty)*safe(i.rate))]);
-    doc.autoTable({
-      startY:68, margin:{left:margin,right:margin}, tableWidth:182,
-      head:[['#','PART / DESCRIPTION','QTY','RATE (Rs.)','AMOUNT (Rs.)']], body,
-      theme:'plain',
-      styles:{font:'helvetica',fontSize:7.4,textColor:navy,cellPadding:{top:3,bottom:3,left:2.2,right:2.2},lineColor:line,lineWidth:{bottom:.18},valign:'middle',overflow:'linebreak'},
-      headStyles:{fillColor:navy,textColor:[255,255,255],fontStyle:'bold',fontSize:7,cellPadding:{top:3.2,bottom:3.2,left:2.2,right:2.2},lineWidth:0},
-      columnStyles:{0:{cellWidth:10,halign:'center'},1:{cellWidth:82,halign:'left'},2:{cellWidth:18,halign:'center'},3:{cellWidth:31,halign:'right'},4:{cellWidth:41,halign:'right'}},
-      didParseCell:(data)=>{ if(data.section==='body' && (data.column.index===3||data.column.index===4)) data.cell.styles.halign='right'; },
-      didDrawPage:()=>{}
-    });
-    let ty=(doc.lastAutoTable?.finalY||78)+8; if(ty>240){doc.addPage();ty=22;}
-    const x1=128,x2=W-margin;
-    doc.setFontSize(8); doc.setTextColor(...muted); doc.text('Subtotal',x1,ty); doc.setTextColor(...navy); doc.text(`Rs. ${fmtNum(inv.subtotal)}`,x2,ty,{align:'right'}); ty+=6;
-    if(inv.discount>0){doc.setTextColor(...muted);doc.text('Discount',x1,ty);doc.setTextColor(...navy);doc.text(`- Rs. ${fmtNum(inv.discount)}`,x2,ty,{align:'right'});ty+=6;}
-    if(inv.otherCharges>0){doc.setTextColor(...muted);doc.text('Other Charges',x1,ty);doc.setTextColor(...navy);doc.text(`Rs. ${fmtNum(inv.otherCharges)}`,x2,ty,{align:'right'});ty+=6;}
-    doc.setFillColor(...navy); doc.roundedRect(123,ty-3,73,12,2.5,2.5,'F'); doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.text('GRAND TOTAL',128,ty+4.5); doc.setFontSize(10); doc.text(`Rs. ${fmtNum(inv.total)}`,192,ty+4.5,{align:'right'}); ty+=18;
-    doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(...muted); doc.text('NOTES',margin,ty); doc.setFont('helvetica','normal'); doc.setTextColor(...navy); doc.text(doc.splitTextToSize(inv.notes||'Thank you for your business.',102),margin,ty+5);
-    if(settings.paymentDetails){ doc.setFont('helvetica','bold');doc.setTextColor(...muted);doc.text('PAYMENT DETAILS',123,ty);doc.setFont('helvetica','normal');doc.setTextColor(...navy);doc.text(doc.splitTextToSize(settings.paymentDetails,73),123,ty+5); }
-    const pages=doc.getNumberOfPages(); for(let p=1;p<=pages;p++){doc.setPage(p); doc.setDrawColor(...line); doc.line(margin,286,W-margin,286); doc.setFont('helvetica','normal');doc.setFontSize(6.5);doc.setTextColor(...muted);doc.text(settings.footerNote||'Computer generated non-GST invoice.',margin,291);doc.text(`Page ${p} of ${pages}`,W-margin,291,{align:'right'});}
-    return doc;
-  }
-  function fmtNum(n){ return safe(n).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}); }
-  function fmtQty(n){ return safe(n).toLocaleString('en-IN',{maximumFractionDigits:2}); }
-  function pdfBlob(inv){ return createPdf(inv).output('blob'); }
-  function pdfName(inv){ return `${(inv.invoiceNo||'Invoice').replace(/[^a-z0-9_-]/gi,'_')}.pdf`; }
-  function previewPdf(inv=invoiceData()){ if(!validateInvoice()) return; try{if(previewUrl)URL.revokeObjectURL(previewUrl);previewUrl=URL.createObjectURL(pdfBlob(inv));$('pdfFrame').src=previewUrl;$('pdfDialog').showModal();}catch(e){toast(e.message);} }
-  function downloadPdf(inv=invoiceData()){ if(!inv.items?.length){toast('Add at least one invoice item');return;} try{createPdf(inv).save(pdfName(inv));toast('PDF downloaded');}catch(e){toast(e.message);} }
-  async function sharePdf(inv=invoiceData()){
-    if(!validateInvoice()) return; try{ const blob=pdfBlob(inv), file=new File([blob],pdfName(inv),{type:'application/pdf'}); if(navigator.share && (!navigator.canShare || navigator.canShare({files:[file]}))){await navigator.share({title:`Invoice ${inv.invoiceNo}`,text:`Invoice ${inv.invoiceNo}${inv.customerName?' - '+inv.customerName:''}`,files:[file]});}else{createPdf(inv).save(pdfName(inv)); const msg=encodeURIComponent(`Invoice ${inv.invoiceNo} PDF downloaded. Please attach and send it on WhatsApp.`); window.open(`https://wa.me/?text=${msg}`,'_blank'); toast('PDF downloaded — attach it in WhatsApp');} }catch(e){if(e?.name!=='AbortError')toast(e.message||'Could not share PDF');}
-  }
-
-  function exportBackup(){ const data={exportedAt:new Date().toISOString(),settings,invoices:loadJSON(KEYS.invoices,[])}; const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='invoice-pro-backup.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000); }
-
-  $$('.nav-item').forEach(b=>b.addEventListener('click',()=>setView(b.dataset.view)));
-  $('menuBtn').addEventListener('click',()=> $('sidebar').classList.toggle('open'));
-  $('newInvoiceBtn').addEventListener('click',()=>newInvoice(true)); $('saveInvoiceBtn').addEventListener('click',saveInvoice); $('addItemBtn').addEventListener('click',()=> $('itemDialog').showModal());
-  $('confirmCustomItemBtn').addEventListener('click',(e)=>{e.preventDefault();if(addCustomItem())$('itemDialog').close();});
-  $('partSearch').addEventListener('input',renderSearchResults); $('partSearch').addEventListener('focus',renderSearchResults); document.addEventListener('keydown',e=>{if(e.key==='/' && document.activeElement?.tagName!=='INPUT' && document.activeElement?.tagName!=='TEXTAREA'){e.preventDefault();$('partSearch').focus();}});
-  $('searchResults').addEventListener('click',e=>{const btn=e.target.closest('[data-sr]');if(!btn)return;const p=CATALOG.find(x=>x.sr===Number(btn.dataset.sr));if(p)addCatalogItem(p);});
-  document.addEventListener('click',e=>{if(!e.target.closest('.quick-search-wrap'))$('searchResults').classList.add('hidden');});
-  $('itemsBody').addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)return;const i=items.find(x=>x.id===b.dataset.id);if(!i)return;if(b.dataset.act==='plus')i.qty=safe(i.qty)+1;if(b.dataset.act==='minus')i.qty=Math.max(.01,safe(i.qty)-1);if(b.dataset.act==='remove')items=items.filter(x=>x.id!==i.id);renderItems();autosaveDraft();});
-  $('itemsBody').addEventListener('input',e=>{const f=e.target.dataset.field,id=e.target.dataset.id;if(!f||!id)return;const i=items.find(x=>x.id===id);if(!i)return;i[f]=Math.max(f==='qty'?0.01:0,safe(e.target.value));updateTotals();autosaveDraft();const row=e.target.closest('tr');if(row)row.querySelector('.amount-cell').textContent=money(safe(i.qty)*safe(i.rate));});
-  ['discountInput','otherChargesInput'].forEach(id=>$(id).addEventListener('input',()=>{updateTotals();autosaveDraft();})); ['invoiceNo','invoiceDate','customerName','customerMobile','customerAddress','invoiceNotes'].forEach(id=>$(id).addEventListener('input',autosaveDraft));
-  $('previewPdfBtn').addEventListener('click',()=>previewPdf()); $('downloadPdfBtn').addEventListener('click',()=>downloadPdf()); $('sharePdfBtn').addEventListener('click',()=>sharePdf()); $('closePdfDialog').addEventListener('click',()=>{$('pdfDialog').close();});
-  $('catalogSearch').addEventListener('input',e=>renderCatalog(e.target.value)); $('catalogGrid').addEventListener('click',e=>{const b=e.target.closest('[data-add-sr]');if(!b)return;const p=CATALOG.find(x=>x.sr===Number(b.dataset.addSr));if(p){addCatalogItem(p);setView('invoiceView');}});
-  $('historySearch').addEventListener('input',renderHistory); $('historyList').addEventListener('click',e=>{const b=e.target.closest('[data-history]');if(!b)return;const all=loadJSON(KEYS.invoices,[]),inv=all.find(x=>x.id===b.dataset.id);if(!inv)return;if(b.dataset.history==='open')applyInvoice(inv,false);if(b.dataset.history==='pdf')downloadPdf(inv);if(b.dataset.history==='delete'&&confirm(`Delete ${inv.invoiceNo}?`)){saveJSON(KEYS.invoices,all.filter(x=>x.id!==inv.id));renderHistory();toast('Invoice deleted');}});
-  $('saveSettingsBtn').addEventListener('click',saveSettings); $('exportDataBtn').addEventListener('click',exportBackup); $('resetAppBtn').addEventListener('click',()=>{if(confirm('Reset settings, history and current draft?')){Object.values(KEYS).forEach(k=>localStorage.removeItem(k));settings={...DEFAULT_SETTINGS};applyBrand();newInvoice(false);fillSettingsForm();toast('App data reset');}});
-  window.addEventListener('beforeunload',()=>{if(previewUrl)URL.revokeObjectURL(previewUrl);});
-  if('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('./sw.js').catch(()=>{});
-
-  applyBrand(); fillSettingsForm(); if(!loadDraft()) newInvoice(false); renderCatalog(); renderHistory();
+  $('exportBackupBtn').title='JSON backup';
+  if('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+  $('invoiceDate').value=today(); renderItems(); setInvoiceLabels(); renderCatalog();
 })();

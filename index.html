@@ -3,215 +3,200 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#0f172a" />
-  <meta name="description" content="Professional non-GST invoice generator for fabrication businesses." />
-  <title>Invoice Pro — Non-GST Billing</title>
+  <meta name="theme-color" content="#113f67" />
+  <meta name="description" content="Smart Parts Billing - fast non-GST invoices for fabrication parts." />
+  <title>Smart Parts Billing</title>
   <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icons/icon-192.png" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <div class="app-shell">
-    <aside class="sidebar" id="sidebar">
-      <div class="brand">
-        <div class="brand-mark">SF</div>
+    <header class="topbar">
+      <div class="brand" role="button" tabindex="0" data-view="new">
+        <div class="brand-mark">SP</div>
         <div>
-          <strong id="sidebarBusinessName">Invoice Pro</strong>
-          <span>Non-GST Billing</span>
+          <div class="brand-title">Smart Parts Billing</div>
+          <div class="brand-sub">Simple • Fast • Non-GST</div>
         </div>
       </div>
-
-      <nav class="nav-list">
-        <button class="nav-item active" data-view="invoiceView"><span>▣</span> New Invoice</button>
-        <button class="nav-item" data-view="historyView"><span>◷</span> Invoice History</button>
-        <button class="nav-item" data-view="catalogView"><span>⌕</span> Parts Catalog</button>
-        <button class="nav-item" data-view="settingsView"><span>⚙</span> Settings</button>
+      <nav class="topnav" aria-label="Main navigation">
+        <button class="nav-btn active" data-view="new">Bill Banao</button>
+        <button class="nav-btn" data-view="history">Bills</button>
+        <button class="nav-btn" data-view="catalog">Parts</button>
+        <button class="icon-btn" id="settingsBtn" aria-label="Settings" title="Settings">⚙</button>
       </nav>
+    </header>
 
-      <div class="sidebar-note">
-        <b>Deployment Ready</b>
-        <span>Works on mobile, desktop & GitHub Pages.</span>
-      </div>
-    </aside>
-
-    <main class="main-panel">
-      <header class="topbar">
-        <button class="icon-btn menu-btn" id="menuBtn" aria-label="Open menu">☰</button>
-        <div class="topbar-title">
-          <h1 id="pageTitle">Create Invoice</h1>
-          <p id="pageSubtitle">Professional non-GST invoice builder</p>
+    <main class="page-wrap">
+      <section id="newView" class="view active-view">
+        <div class="welcome-row">
+          <div>
+            <p class="eyebrow">NEW BILL</p>
+            <h1>Bill banao, PDF bhejo.</h1>
+            <p class="muted">Part search karo, quantity set karo aur professional invoice seconds me ready.</p>
+          </div>
+          <div class="invoice-badge">
+            <span>Invoice</span>
+            <strong id="invoiceNoTop">INV-0001</strong>
+          </div>
         </div>
-        <div class="topbar-actions">
-          <button class="btn btn-ghost" id="newInvoiceBtn">+ New</button>
-          <button class="btn btn-primary" id="saveInvoiceBtn">Save Invoice</button>
-        </div>
-      </header>
 
-      <section class="view active" id="invoiceView">
-        <div class="invoice-grid">
-          <div class="card editor-card">
-            <div class="section-heading">
-              <div>
-                <span class="eyebrow">INVOICE DETAILS</span>
-                <h2>Customer & Bill</h2>
+        <div class="workspace-grid">
+          <div class="editor-column">
+            <section class="card customer-card">
+              <div class="card-heading">
+                <div>
+                  <p class="section-kicker">CUSTOMER</p>
+                  <h2>Customer details</h2>
+                </div>
+                <span class="step-chip">01</span>
               </div>
-              <span class="status-pill">NON-GST</span>
-            </div>
+              <div class="form-grid three">
+                <label><span>Name</span><input id="customerName" autocomplete="name" placeholder="Customer name" /></label>
+                <label><span>Mobile</span><input id="customerPhone" inputmode="tel" autocomplete="tel" placeholder="Mobile number" /></label>
+                <label><span>Date</span><input id="invoiceDate" type="date" /></label>
+              </div>
+              <label class="full-label"><span>Address / Note <small>(optional)</small></span><input id="customerAddress" placeholder="Area, city or short note" /></label>
+            </section>
 
-            <div class="form-grid four">
-              <label>Invoice No.
-                <input id="invoiceNo" autocomplete="off" />
-              </label>
-              <label>Date
-                <input type="date" id="invoiceDate" />
-              </label>
-              <label>Customer Name
-                <input id="customerName" placeholder="Customer / company name" autocomplete="off" />
-              </label>
-              <label>Mobile
-                <input id="customerMobile" inputmode="tel" placeholder="10-digit mobile" autocomplete="off" />
-              </label>
-            </div>
+            <section class="card parts-card">
+              <div class="card-heading parts-heading">
+                <div>
+                  <p class="section-kicker">ITEMS</p>
+                  <h2>Parts add karo</h2>
+                </div>
+                <span class="step-chip">02</span>
+              </div>
 
-            <label class="full-label">Customer Address
-              <textarea id="customerAddress" rows="2" placeholder="Address (optional)"></textarea>
-            </label>
+              <div class="part-search-wrap">
+                <span class="search-icon">⌕</span>
+                <input id="partSearch" type="search" autocomplete="off" placeholder="Part no. ya description search karo…" />
+                <button class="small-btn" id="customItemBtn">+ Custom</button>
+                <div id="partResults" class="search-results" hidden></div>
+              </div>
+
+              <div class="items-head" aria-hidden="true">
+                <span>PART</span><span>QTY</span><span>RATE</span><span>AMOUNT</span><span></span>
+              </div>
+              <div id="itemsList" class="items-list"></div>
+              <div id="emptyItems" class="empty-items">
+                <div class="empty-icon">＋</div>
+                <strong>Abhi koi part add nahi hai</strong>
+                <span>Upar search karke part select karo.</span>
+              </div>
+            </section>
+
+            <section class="card adjustments-card">
+              <div class="card-heading compact">
+                <div>
+                  <p class="section-kicker">ADJUSTMENTS</p>
+                  <h2>Extra details</h2>
+                </div>
+              </div>
+              <div class="form-grid three">
+                <label><span>Discount (₹)</span><input id="discount" type="number" inputmode="decimal" min="0" step="0.01" value="0" /></label>
+                <label><span>Other charges (₹)</span><input id="otherCharges" type="number" inputmode="decimal" min="0" step="0.01" value="0" /></label>
+                <label><span>Payment</span><select id="paymentStatus"><option>Unpaid</option><option>Paid</option><option>Part Paid</option></select></label>
+              </div>
+              <label class="full-label"><span>Invoice note <small>(optional)</small></span><textarea id="invoiceNote" rows="2" placeholder="Thank you / payment note / delivery note"></textarea></label>
+            </section>
           </div>
 
-          <div class="card editor-card items-card">
-            <div class="section-heading items-heading">
-              <div>
-                <span class="eyebrow">ITEMS</span>
-                <h2>Invoice Items</h2>
+          <aside class="summary-column">
+            <section class="summary-card">
+              <div class="summary-top">
+                <div>
+                  <p class="section-kicker light">BILL SUMMARY</p>
+                  <h2 id="summaryInvoiceNo">INV-0001</h2>
+                </div>
+                <span class="non-gst-chip">NON-GST</span>
               </div>
-              <button class="btn btn-outline" id="addItemBtn">+ Add Item</button>
-            </div>
-
-            <div class="quick-search-wrap">
-              <div class="search-box">
-                <span>⌕</span>
-                <input id="partSearch" placeholder="Search by part no. or description..." autocomplete="off" />
-                <kbd>/</kbd>
+              <div class="summary-lines">
+                <div><span>Items</span><strong id="itemCount">0</strong></div>
+                <div><span>Subtotal</span><strong id="subtotal">₹0.00</strong></div>
+                <div><span>Discount</span><strong id="discountSummary">− ₹0.00</strong></div>
+                <div><span>Other charges</span><strong id="chargesSummary">₹0.00</strong></div>
               </div>
-              <div class="search-results hidden" id="searchResults"></div>
-            </div>
-
-            <div class="items-table-wrap">
-              <table class="items-table">
-                <thead>
-                  <tr>
-                    <th class="col-index">#</th>
-                    <th>Part / Description</th>
-                    <th class="col-qty">Qty</th>
-                    <th class="col-rate num">Rate</th>
-                    <th class="col-amount num">Amount</th>
-                    <th class="col-action"></th>
-                  </tr>
-                </thead>
-                <tbody id="itemsBody"></tbody>
-              </table>
-            </div>
-
-            <div class="empty-items" id="emptyItems">
-              <div class="empty-icon">▤</div>
-              <b>No items added</b>
-              <span>Search a part above or add a custom item.</span>
-            </div>
-          </div>
-
-          <div class="bottom-grid">
-            <div class="card editor-card notes-card">
-              <span class="eyebrow">NOTES</span>
-              <textarea id="invoiceNotes" rows="5" placeholder="Payment terms, delivery note, thank you message...">Thank you for your business.</textarea>
-            </div>
-
-            <div class="card totals-card">
-              <div class="total-row"><span>Subtotal</span><b id="subtotalText">₹0.00</b></div>
-              <div class="total-row editable-total">
-                <span>Discount</span>
-                <div><span>₹</span><input type="number" min="0" step="0.01" id="discountInput" value="0" /></div>
+              <div class="grand-total">
+                <span>Grand Total</span>
+                <strong id="grandTotal">₹0.00</strong>
               </div>
-              <div class="total-row editable-total">
-                <span>Other Charges</span>
-                <div><span>₹</span><input type="number" min="0" step="0.01" id="otherChargesInput" value="0" /></div>
+              <div class="action-stack">
+                <button class="primary-btn" id="saveBtn">✓ Save Bill</button>
+                <button class="whatsapp-btn" id="shareBtn">↗ Share PDF</button>
+                <div class="two-actions">
+                  <button class="secondary-btn" id="previewBtn">PDF Preview</button>
+                  <button class="secondary-btn" id="downloadBtn">Download</button>
+                </div>
+                <button class="text-btn" id="newBillBtn">＋ New blank bill</button>
               </div>
-              <div class="grand-total"><span>Grand Total</span><b id="grandTotalText">₹0.00</b></div>
-              <div class="action-grid">
-                <button class="btn btn-dark" id="previewPdfBtn">Preview PDF</button>
-                <button class="btn btn-primary" id="downloadPdfBtn">Download PDF</button>
-                <button class="btn btn-whatsapp" id="sharePdfBtn">Share PDF</button>
-              </div>
-            </div>
-          </div>
+              <p class="privacy-note">Bills is device par save hote hain. Koi account ya server required nahi.</p>
+            </section>
+          </aside>
         </div>
       </section>
 
-      <section class="view" id="historyView">
-        <div class="card page-card">
-          <div class="section-heading">
-            <div><span class="eyebrow">LOCAL RECORDS</span><h2>Invoice History</h2></div>
-            <button class="btn btn-outline" id="exportDataBtn">Export Backup</button>
-          </div>
-          <div class="search-box standalone"><span>⌕</span><input id="historySearch" placeholder="Search invoice no., customer or mobile..." /></div>
-          <div class="history-list" id="historyList"></div>
+      <section id="historyView" class="view">
+        <div class="page-title-row">
+          <div><p class="eyebrow">SAVED BILLS</p><h1>Invoice history</h1><p class="muted">Naam, mobile ya invoice number se search karo.</p></div>
+          <button class="primary-btn compact-btn" id="historyNewBtn">+ New Bill</button>
         </div>
+        <section class="card">
+          <div class="history-tools">
+            <div class="simple-search"><span>⌕</span><input id="historySearch" placeholder="Search bills…" /></div>
+            <button class="secondary-btn" id="exportBackupBtn">Export backup</button>
+          </div>
+          <div id="historyList" class="history-list"></div>
+          <div id="emptyHistory" class="empty-state"><strong>No saved bills yet</strong><span>Bill save karoge to yahan dikhega.</span></div>
+        </section>
       </section>
 
-      <section class="view" id="catalogView">
-        <div class="card page-card">
-          <div class="section-heading">
-            <div><span class="eyebrow">65 PARTS LOADED</span><h2>SONU FABRICATION Catalog</h2></div>
-          </div>
-          <div class="search-box standalone"><span>⌕</span><input id="catalogSearch" placeholder="Search catalog..." /></div>
-          <div class="catalog-grid" id="catalogGrid"></div>
+      <section id="catalogView" class="view">
+        <div class="page-title-row">
+          <div><p class="eyebrow">PARTS MASTER</p><h1>65 parts ready</h1><p class="muted">Part number, description ya unit se instant search.</p></div>
+          <button class="primary-btn compact-btn" id="catalogNewBtn">+ Make Bill</button>
         </div>
-      </section>
-
-      <section class="view" id="settingsView">
-        <div class="card page-card settings-card">
-          <div class="section-heading">
-            <div><span class="eyebrow">BUSINESS PROFILE</span><h2>Invoice Settings</h2></div>
-          </div>
-          <div class="form-grid two">
-            <label>Business Name<input id="businessName" placeholder="SONU FABRICATION" /></label>
-            <label>Phone<input id="businessPhone" inputmode="tel" placeholder="Business phone" /></label>
-            <label>Address<textarea id="businessAddress" rows="3" placeholder="Business address"></textarea></label>
-            <label>Payment / Bank Details<textarea id="paymentDetails" rows="3" placeholder="UPI / Bank / payment note"></textarea></label>
-            <label>Invoice Prefix<input id="invoicePrefix" placeholder="INV" maxlength="8" /></label>
-            <label>Footer Note<input id="footerNote" placeholder="Computer generated invoice" /></label>
-          </div>
-          <div class="settings-actions">
-            <button class="btn btn-primary" id="saveSettingsBtn">Save Settings</button>
-            <button class="btn btn-ghost danger" id="resetAppBtn">Reset App Data</button>
-          </div>
-        </div>
+        <section class="card">
+          <div class="simple-search catalog-search"><span>⌕</span><input id="catalogSearch" placeholder="Search 65 parts…" /></div>
+          <div id="catalogList" class="catalog-list"></div>
+        </section>
       </section>
     </main>
   </div>
 
-  <dialog id="itemDialog" class="modal">
-    <form method="dialog" class="modal-card" id="customItemForm">
-      <div class="modal-head"><div><span class="eyebrow">CUSTOM ITEM</span><h3>Add Invoice Item</h3></div><button class="icon-btn" value="cancel">×</button></div>
-      <label>Part No. / Code<input id="customPartNo" /></label>
-      <label>Description<input id="customDescription" required /></label>
-      <div class="form-grid two">
-        <label>Quantity<input id="customQty" type="number" min="0.01" step="0.01" value="1" /></label>
-        <label>Rate<input id="customRate" type="number" min="0" step="0.01" value="0" /></label>
+  <div id="settingsModal" class="modal" hidden>
+    <div class="modal-backdrop" data-close-modal></div>
+    <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+      <div class="modal-head"><div><p class="section-kicker">SETTINGS</p><h2 id="settingsTitle">Business details</h2></div><button class="icon-btn" data-close-modal>✕</button></div>
+      <div class="modal-body">
+        <label><span>Business name</span><input id="businessName" placeholder="e.g. SONU FABRICATION" /></label>
+        <label><span>Mobile / Contact</span><input id="businessPhone" inputmode="tel" placeholder="Phone number" /></label>
+        <label><span>Address</span><textarea id="businessAddress" rows="3" placeholder="Business address"></textarea></label>
+        <div class="form-grid two">
+          <label><span>Invoice prefix</span><input id="invoicePrefix" maxlength="8" placeholder="INV" /></label>
+          <label><span>Footer note</span><input id="footerNote" placeholder="Thank you for your business" /></label>
+        </div>
+        <label><span>Payment details <small>(optional)</small></span><textarea id="paymentDetails" rows="2" placeholder="UPI / bank / cash note"></textarea></label>
       </div>
-      <div class="modal-actions"><button class="btn btn-ghost" value="cancel">Cancel</button><button class="btn btn-primary" id="confirmCustomItemBtn" value="default">Add Item</button></div>
-    </form>
-  </dialog>
+      <div class="modal-actions"><button class="secondary-btn" data-close-modal>Cancel</button><button class="primary-btn" id="saveSettingsBtn">Save Settings</button></div>
+    </section>
+  </div>
 
-  <dialog id="pdfDialog" class="modal pdf-modal">
-    <div class="modal-card pdf-modal-card">
-      <div class="modal-head"><div><span class="eyebrow">PDF PREVIEW</span><h3>Invoice Preview</h3></div><button class="icon-btn" id="closePdfDialog">×</button></div>
-      <iframe id="pdfFrame" title="PDF Preview"></iframe>
-    </div>
-  </dialog>
+  <div id="customModal" class="modal" hidden>
+    <div class="modal-backdrop" data-close-custom></div>
+    <section class="modal-card small-modal" role="dialog" aria-modal="true">
+      <div class="modal-head"><div><p class="section-kicker">CUSTOM ITEM</p><h2>Add custom part</h2></div><button class="icon-btn" data-close-custom>✕</button></div>
+      <div class="modal-body">
+        <label><span>Part no. / Code</span><input id="customPartNo" placeholder="Optional code" /></label>
+        <label><span>Description</span><input id="customDescription" placeholder="Item description" /></label>
+        <div class="form-grid two"><label><span>Qty</span><input id="customQty" type="number" min="0.01" step="0.01" value="1" /></label><label><span>Rate (₹)</span><input id="customRate" type="number" min="0" step="0.01" value="0" /></label></div>
+      </div>
+      <div class="modal-actions"><button class="secondary-btn" data-close-custom>Cancel</button><button class="primary-btn" id="addCustomBtn">Add Item</button></div>
+    </section>
+  </div>
 
-  <div class="toast" id="toast"></div>
-
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <script src="data.js"></script>
   <script src="app.js"></script>
 </body>

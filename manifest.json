@@ -1,9 +1,13 @@
 {
-  "name":"Invoice Pro - Non-GST Billing",
-  "short_name":"Invoice Pro",
+  "name":"Smart Parts Billing",
+  "short_name":"Parts Billing",
   "start_url":"./",
   "display":"standalone",
-  "background_color":"#f4f7fb",
-  "theme_color":"#0f172a",
-  "icons":[]
+  "background_color":"#f5f7fa",
+  "theme_color":"#113f67",
+  "description":"Fast non-GST parts billing and PDF invoices.",
+  "icons":[
+    {"src":"icons/icon-192.png","sizes":"192x192","type":"image/png"},
+    {"src":"icons/icon-512.png","sizes":"512x512","type":"image/png"}
+  ]
 }

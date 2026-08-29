@@ -1,22 +1,22 @@
-# Invoice Pro — SONU FABRICATION
+# Smart Parts Billing — Classic
 
-Professional static non-GST invoice web app.
+Static, deployment-ready non-GST invoice app.
+
+## Deploy to GitHub Pages
+Upload all files to the root of a GitHub repository and enable **Settings → Pages → Deploy from a branch → main / root**.
 
 ## Features
-- Responsive mobile/desktop invoice builder
-- 65-part searchable SONU FABRICATION catalog
-- Quantity +/- controls and editable rates
-- Local invoice history and search
-- Business settings stored on device
-- A4 PDF generation with explicit fixed column widths/alignment
-- PDF preview and download
-- Android/Web Share PDF sharing (WhatsApp appears in the system share sheet when supported)
-- Backup export (JSON)
-- PWA-ready shell and service worker
-- No backend required
+- 65 searchable fabrication parts
+- Quantity +/- controls and editable rate
+- Custom items
+- Customer details, discounts and other charges
+- Saved invoice history and search (localStorage)
+- Professional client-side PDF generation with fixed Rate/Amount alignment
+- Android Web Share API for sharing the generated PDF to WhatsApp/other apps
+- PDF preview + download
+- Business settings
+- PWA/offline service worker
+- No backend, login or API key required
 
-## Deploy on GitHub Pages
-Upload all files in this folder to a GitHub repository and enable **Settings → Pages → Deploy from branch → main / root**.
-
-## Important
-PDF generation uses locally referenced CDN scripts in `index.html` for jsPDF and jsPDF-AutoTable. The app itself is static and requires no API keys.
+## Data note
+Bills and settings are stored in the current browser/device. Use **Bills → Export backup** periodically.
