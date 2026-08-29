@@ -10,6 +10,7 @@ export const DEFAULT_SETTINGS = {
   phone: '',
   address: '',
   paymentDetails: '',
+  pan: '',
   invoicePrefix: 'INV',
   dueDays: 7,
   footerNote: 'Thank you for your business.',

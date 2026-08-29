@@ -191,7 +191,7 @@ function Dashboard({ invoices, settings, setView }) {
 function InvoiceEditor({ invoice, setInvoice, parts, settings, invoices, onSave, onBlank, showToast }) {
   const [query, setQuery] = useState('')
   const [customOpen, setCustomOpen] = useState(false)
-  const [custom, setCustom] = useState({ partNo:'', description:'', unit:'NOS', rate:'' })
+  const [custom, setCustom] = useState({ partNo:'', description:'', size:'', unit:'NOS', rate:'' })
   const calculated = calcInvoice(invoice)
   const results = useMemo(() => {
     const q = query.trim().toLowerCase(); if (!q) return []
@@ -206,15 +206,15 @@ function InvoiceEditor({ invoice, setInvoice, parts, settings, invoices, onSave,
   const addPart = (p) => {
     const existing = invoice.items.find(i => i.partKey === `${p.partNo}-${p.unit}`)
     if (existing) setInvoice({ ...invoice, items: invoice.items.map(i => i.id === existing.id ? { ...i, qty: Number(i.qty)+1 } : i) })
-    else setInvoice({ ...invoice, items: [...invoice.items, { id:uid(), partKey:`${p.partNo}-${p.unit}`, partNo:p.partNo, description:p.description, unit:p.unit, qty:1, rate:Number(p.rate||0) }] })
+    else setInvoice({ ...invoice, items: [...invoice.items, { id:uid(), partKey:`${p.partNo}-${p.unit}`, partNo:p.partNo, description:p.description, size:p.size || '', unit:p.unit, qty:1, rate:Number(p.rate||0) }] })
     setQuery('')
   }
   const updateItem = (id, patch) => setInvoice({ ...invoice, items: invoice.items.map(i => i.id === id ? { ...i, ...patch } : i) })
   const removeItem = id => setInvoice({ ...invoice, items: invoice.items.filter(i => i.id !== id) })
   const addCustom = () => {
     if (!custom.description.trim()) return showToast('Custom item description required', 'error')
-    addPart({ partNo:custom.partNo || 'CUSTOM', description:custom.description, unit:custom.unit || 'NOS', rate:Number(custom.rate||0) })
-    setCustom({ partNo:'', description:'', unit:'NOS', rate:'' }); setCustomOpen(false)
+    addPart({ partNo:custom.partNo || 'CUSTOM', description:custom.description, size:custom.size || '', unit:custom.unit || 'NOS', rate:Number(custom.rate||0) })
+    setCustom({ partNo:'', description:'', size:'', unit:'NOS', rate:'' }); setCustomOpen(false)
   }
 
   const save = () => onSave(calcInvoice(invoice))
@@ -256,9 +256,15 @@ function InvoiceEditor({ invoice, setInvoice, parts, settings, invoices, onSave,
             <button className="secondary-btn" onClick={()=>setCustomOpen(true)}><PackagePlus size={18}/> Custom Item</button>
           </div>
           {invoice.items.length ? <div className="items-wrap">
-            <div className="items-header"><span>PART DETAILS</span><span>QTY</span><span>RATE</span><span>AMOUNT</span><span/></div>
+            <div className="items-header"><span>PART DETAILS</span><span>SIZE</span><span>QTY</span><span>RATE</span><span>AMOUNT</span><span/></div>
             {invoice.items.map(item => <motion.div layout className="item-row" key={item.id}>
               <div className="item-desc"><span className="item-code">{item.partNo}</span><strong>{item.description}</strong><small>{item.unit}</small></div>
+              <input
+                className="size-input"
+                value={item.size || ''}
+                placeholder="12mm"
+                onChange={e=>updateItem(item.id,{size:e.target.value})}
+              />
               <div className="qty-control"><button onClick={()=>updateItem(item.id,{qty:Math.max(1,Number(item.qty)-1)})}><Minus size={16}/></button><input value={item.qty} inputMode="numeric" onChange={e=>updateItem(item.id,{qty:Math.max(1,Number(e.target.value)||1)})}/><button onClick={()=>updateItem(item.id,{qty:Number(item.qty)+1})}><Plus size={16}/></button></div>
               <div className="money-input"><span>₹</span><input value={item.rate} inputMode="decimal" onChange={e=>updateItem(item.id,{rate:Number(e.target.value)})}/></div>
               <strong className="line-total">{money(Number(item.qty)*Number(item.rate))}</strong>
@@ -286,7 +292,7 @@ function InvoiceEditor({ invoice, setInvoice, parts, settings, invoices, onSave,
       </aside>
     </div>
 
-    <AnimatePresence>{customOpen && <Modal onClose={()=>setCustomOpen(false)} title="Add custom item"><div className="form-grid cols-2"><Field label="Part No."><input value={custom.partNo} onChange={e=>setCustom({...custom,partNo:e.target.value})}/></Field><Field label="Unit"><input value={custom.unit} onChange={e=>setCustom({...custom,unit:e.target.value})}/></Field></div><Field label="Description" className="mt-16"><input value={custom.description} onChange={e=>setCustom({...custom,description:e.target.value})}/></Field><Field label="Rate (₹)" className="mt-16"><input type="number" value={custom.rate} onChange={e=>setCustom({...custom,rate:e.target.value})}/></Field><div className="modal-actions"><button className="secondary-btn" onClick={()=>setCustomOpen(false)}>Cancel</button><button className="primary-btn" onClick={addCustom}><Plus size={17}/> Add Item</button></div></Modal>}</AnimatePresence>
+    <AnimatePresence>{customOpen && <Modal onClose={()=>setCustomOpen(false)} title="Add custom item"><div className="form-grid cols-2"><Field label="Part No."><input value={custom.partNo} onChange={e=>setCustom({...custom,partNo:e.target.value})}/></Field><Field label="Unit"><input value={custom.unit} onChange={e=>setCustom({...custom,unit:e.target.value})}/></Field></div><Field label="Description" className="mt-16"><input value={custom.description} onChange={e=>setCustom({...custom,description:e.target.value})}/></Field><div className="form-grid cols-2 mt-16"><Field label="Size"><input value={custom.size} placeholder="e.g. 12mm" onChange={e=>setCustom({...custom,size:e.target.value})}/></Field><Field label="Rate (₹)"><input type="number" value={custom.rate} onChange={e=>setCustom({...custom,rate:e.target.value})}/></Field></div><div className="modal-actions"><button className="secondary-btn" onClick={()=>setCustomOpen(false)}>Cancel</button><button className="primary-btn" onClick={addCustom}><Plus size={17}/> Add Item</button></div></Modal>}</AnimatePresence>
   </motion.div>
 }
 
@@ -335,7 +341,7 @@ function SettingsPage({ settings, setSettings, showToast, onImport }) {
           <div className="form-grid cols-2 mt-24"><Field label="Business Name"><div className="input-icon"><Building2 size={18}/><input value={draft.businessName} onChange={e=>patch({businessName:e.target.value})}/></div></Field><Field label="Phone"><div className="input-icon"><Phone size={18}/><input value={draft.phone} onChange={e=>patch({phone:e.target.value})}/></div></Field></div>
           <Field label="Business Address" className="mt-16"><div className="input-icon"><MapPin size={18}/><input value={draft.address} onChange={e=>patch({address:e.target.value})}/></div></Field>
         </Card>
-        <Card className="form-card"><div className="section-head"><div><span className="eyebrow">INVOICE</span><h2>Billing preferences</h2></div></div><div className="form-grid cols-2"><Field label="Invoice Prefix"><input value={draft.invoicePrefix} onChange={e=>patch({invoicePrefix:e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g,'')})}/></Field><Field label="Default Due Days"><input type="number" min="0" value={draft.dueDays} onChange={e=>patch({dueDays:Number(e.target.value)})}/></Field></div><Field label="Payment Details" className="mt-16"><div className="input-icon textarea-icon"><CreditCard size={18}/><textarea rows="3" value={draft.paymentDetails} onChange={e=>patch({paymentDetails:e.target.value})} placeholder="UPI, bank or payment instructions"/></div></Field><Field label="PDF Footer Note" className="mt-16"><textarea rows="2" value={draft.footerNote} onChange={e=>patch({footerNote:e.target.value})}/></Field></Card>
+        <Card className="form-card"><div className="section-head"><div><span className="eyebrow">INVOICE</span><h2>Billing preferences</h2></div></div><div className="form-grid cols-2"><Field label="Invoice Prefix"><input value={draft.invoicePrefix} onChange={e=>patch({invoicePrefix:e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g,'')})}/></Field><Field label="Default Due Days"><input type="number" min="0" value={draft.dueDays} onChange={e=>patch({dueDays:Number(e.target.value)})}/></Field></div><Field label="PAN No. (Optional)" className="mt-16"><input value={draft.pan || ''} placeholder="Enter PAN number" onChange={e=>patch({pan:e.target.value.toUpperCase()})}/></Field><Field label="Payment Details" className="mt-16"><div className="input-icon textarea-icon"><CreditCard size={18}/><textarea rows="3" value={draft.paymentDetails} onChange={e=>patch({paymentDetails:e.target.value})} placeholder="UPI, bank or payment instructions"/></div></Field><Field label="PDF Footer Note" className="mt-16"><textarea rows="2" value={draft.footerNote} onChange={e=>patch({footerNote:e.target.value})}/></Field></Card>
         <Card className="form-card"><div className="section-head"><div><span className="eyebrow">DATA</span><h2>Backup & restore</h2></div></div><p className="muted-copy">Export a JSON backup before moving the software to another device.</p><div className="backup-actions"><button className="secondary-btn" onClick={()=>{const blob=new Blob([JSON.stringify(storage.exportAll(),null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`smart-billing-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href)}}><Download size={18}/> Export Backup</button><button className="secondary-btn" onClick={()=>importRef.current?.click()}><Upload size={18}/> Import Backup</button><input ref={importRef} hidden type="file" accept="application/json" onChange={e=>onImport(e.target.files?.[0])}/></div></Card>
       </div>
       <aside className="settings-preview"><Card className="brand-preview-card"><span className="eyebrow">LIVE PREVIEW</span><LogoMark settings={draft} size="xl"/><strong>{draft.businessName||'Business Name'}</strong><span>{draft.phone||'Phone number'}</span><small>{draft.address||'Business address'}</small><div className="mini-invoice"><div><span>INVOICE</span><strong>{draft.invoicePrefix||'INV'}-0001</strong></div><div className="mini-line"/><div className="mini-line short"/><div className="mini-total"><span>Grand Total</span><strong>₹12,450.00</strong></div></div></Card></aside>
