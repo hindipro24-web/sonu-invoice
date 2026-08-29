@@ -334,7 +334,24 @@ function SettingsPage({ settings, setSettings, showToast, onImport }) {
       </div>
       <aside className="settings-preview"><Card className="brand-preview-card"><span className="eyebrow">LIVE PREVIEW</span><LogoMark settings={draft} size="xl"/><strong>{draft.businessName||'Business Name'}</strong><span>{draft.phone||'Phone number'}</span><small>{draft.address||'Business address'}</small><div className="mini-invoice"><div><span>INVOICE</span><strong>{draft.invoicePrefix||'INV'}-0001</strong></div><div className="mini-line"/><div className="mini-line short"/><div className="mini-total"><span>Grand Total</span><strong>₹12,450.00</strong></div></div></Card></aside>
     </div>
-    <div className={`mobile-save-bar ${dirty?'show':''}`}><div><strong>{dirty?'Unsaved changes':'Saved'}</strong><span>{dirty?'Save before leaving settings':'Settings are up to date'}</span></div><button className="primary-btn" disabled={!dirty} onClick={save}><Save size={18}/> Save</button></div>
+    <AnimatePresence>
+      {dirty && (
+        <motion.div
+          className="mobile-save-bar show"
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 24 }}
+        >
+          <div>
+            <strong>Unsaved changes</strong>
+            <span>Save before leaving settings</span>
+          </div>
+          <button className="primary-btn" onClick={save}>
+            <Save size={18}/> Save
+          </button>
+        </motion.div>
+      )}
+    </AnimatePresence>
   </motion.div>
 }
 
