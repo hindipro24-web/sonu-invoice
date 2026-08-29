@@ -1,10 +1,12 @@
 {
-  "name":"Smart Parts Billing Pro",
-  "short_name":"Smart Billing",
-  "start_url":"./",
-  "display":"standalone",
-  "background_color":"#f4f7fb",
-  "theme_color":"#0b1f33",
-  "description":"Professional non-GST parts billing software",
-  "icons":[{"src":"icons/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+  "name": "Smart Parts Billing",
+  "short_name": "Smart Billing",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#070b14",
+  "theme_color": "#070b14",
+  "description": "Futuristic professional non-GST parts billing software",
+  "icons": [
+    {"src":"icons/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+  ]
 }

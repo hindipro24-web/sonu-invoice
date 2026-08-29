@@ -4,8 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#0b1f33" />
-  <meta name="description" content="Smart Parts Billing Pro - professional non-GST fabrication billing software." />
-  <title>Smart Parts Billing Pro</title>
+  <meta name="description" content="Smart Parts Billing - futuristic professional non-GST billing software for all devices." />
+  <title>Smart Parts Billing — Future UI</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="stylesheet" href="styles.css" />
 </head>
@@ -19,7 +19,7 @@
         </div>
         <div class="brand-copy">
           <strong id="sidebarBusinessName">Smart Parts Billing</strong>
-          <span>Billing OS • Non-GST</span>
+          <span>Invoice Suite • Non-GST</span>
         </div>
       </div>
 
@@ -29,12 +29,11 @@
         <button class="side-link" data-view="invoices"><span class="nav-icon">▤</span><span>Invoices</span><span class="nav-count" id="invoiceNavCount">0</span></button>
         <button class="side-link" data-view="customers"><span class="nav-icon">◎</span><span>Customers</span></button>
         <button class="side-link" data-view="parts"><span class="nav-icon">◇</span><span>Parts Master</span></button>
-        <button class="side-link" data-view="automation"><span class="nav-icon">⚡</span><span>Automation</span><span class="status-dot"></span></button>
       </nav>
 
       <div class="sidebar-bottom">
         <button class="side-link" data-view="settings"><span class="nav-icon">⚙</span><span>Settings</span></button>
-        <div class="local-badge"><span class="pulse-dot"></span><div><strong>Local-first</strong><small>Your data stays on device</small></div></div>
+        <div class="local-badge"><span class="pulse-dot"></span><div><strong>Private workspace</strong><small>Data stays on this device</small></div></div>
       </div>
     </aside>
 
@@ -56,9 +55,9 @@
         <section class="view active-view" id="dashboardView">
           <div class="hero-strip">
             <div>
-              <span class="hero-kicker">SMART BILLING WORKSPACE</span>
-              <h1 id="dashboardGreeting">Business control, ek jagah.</h1>
-              <p>Invoices, payments, customers aur follow-ups ko fast manage karo.</p>
+              <span class="hero-kicker">NEXT-GEN BILLING WORKSPACE</span>
+              <h1 id="dashboardGreeting">Billing that feels effortless.</h1>
+              <p>Invoices, customers, parts aur payments — ek clean professional workspace me.</p>
             </div>
             <button class="hero-action" data-view="invoice"><span>＋</span><div><small>Quick action</small><strong>Create Invoice</strong></div></button>
           </div>
@@ -77,11 +76,15 @@
               <div id="recentEmpty" class="empty-state"><div class="empty-round">▤</div><strong>No invoice yet</strong><span>Create your first professional bill.</span><button class="primary-btn compact" data-view="invoice">Create Invoice</button></div>
             </section>
 
-            <section class="panel automation-preview">
-              <div class="panel-head"><div><span class="panel-kicker">AUTOMATION</span><h2>Follow-up engine</h2></div><span class="live-pill">LIVE</span></div>
-              <div class="automation-score"><div class="score-ring" id="automationScore">3</div><div><strong>Smart rules ready</strong><span>Drafts, due reminders & webhook</span></div></div>
-              <div id="duePreview" class="due-preview"></div>
-              <button class="secondary-btn full" data-view="automation">Open Automation Center</button>
+            <section class="panel workspace-preview">
+              <div class="panel-head"><div><span class="panel-kicker">WORKSPACE</span><h2>Quick access</h2></div><span class="secure-pill">LOCAL</span></div>
+              <div class="workspace-orbit" aria-hidden="true"><span></span><i></i><b></b><em></em></div>
+              <div class="workspace-copy"><strong>Your billing hub is ready</strong><span>Open customers, parts master or branding without leaving the workspace.</span></div>
+              <div class="quick-grid">
+                <button class="quick-tile" data-view="customers"><span>◎</span><div><strong>Customers</strong><small>Billing history</small></div></button>
+                <button class="quick-tile" data-view="parts"><span>◇</span><div><strong>Parts Master</strong><small>Rates & catalog</small></div></button>
+                <button class="quick-tile" data-view="settings"><span>⚙</span><div><strong>Branding</strong><small>Logo & PDF</small></div></button>
+              </div>
             </section>
           </div>
         </section>
@@ -148,7 +151,7 @@
                   <div class="two-actions"><button class="secondary-btn" id="previewBtn">Preview</button><button class="secondary-btn" id="downloadBtn">Download PDF</button></div>
                   <button class="link-btn center" id="newBillBtn">＋ Start blank invoice</button>
                 </div>
-                <div class="autosave-line"><span class="pulse-dot"></span><span id="autosaveText">Auto-draft enabled</span></div>
+                <div class="autosave-line"><span class="pulse-dot"></span><span id="autosaveText">Saved locally on this device</span></div>
               </section>
             </aside>
           </div>
@@ -180,21 +183,6 @@
           <section class="panel"><div class="toolbar"><div class="smart-search simple"><span>⌕</span><input id="catalogSearch" placeholder="Search part number, description or unit…" /></div><span class="soft-chip" id="partsCountChip">65 parts</span></div><div class="data-table-wrap"><table class="data-table"><thead><tr><th>PART NO.</th><th>DESCRIPTION</th><th>UNIT</th><th class="num">RATE</th><th></th></tr></thead><tbody id="partsTableBody"></tbody></table></div></section>
         </section>
 
-        <!-- AUTOMATION -->
-        <section class="view" id="automationView">
-          <div class="page-heading"><div><span class="page-kicker">AUTOMATION CENTER</span><h1>Smart follow-up engine</h1><p>Manual billing ko faster workflow me convert karo.</p></div><span class="automation-live"><span class="pulse-dot"></span> Automation Ready</span></div>
-          <div class="automation-grid">
-            <section class="panel rules-panel"><div class="panel-head"><div><span class="panel-kicker">RULES</span><h2>Active automations</h2></div></div>
-              <label class="rule-row"><div class="rule-icon">✦</div><div><strong>Auto-save invoice draft</strong><span>Typing ke saath current bill draft save hota rahega.</span></div><input type="checkbox" class="toggle" id="autoDraftToggle" checked /></label>
-              <label class="rule-row"><div class="rule-icon">◷</div><div><strong>Due reminder detection</strong><span>Due soon aur overdue unpaid invoices automatically identify honge.</span></div><input type="checkbox" class="toggle" id="dueReminderToggle" checked /></label>
-              <label class="rule-row"><div class="rule-icon">⚡</div><div><strong>Send saved invoice to webhook</strong><span>n8n / Make / custom workflow ko invoice JSON POST karo.</span></div><input type="checkbox" class="toggle" id="webhookToggle" /></label>
-              <div class="webhook-box"><label><span>Webhook URL</span><input id="webhookUrl" type="url" placeholder="https://your-n8n-domain/webhook/invoice" /></label><button class="secondary-btn" id="testWebhookBtn">Test Webhook</button></div>
-            </section>
-            <section class="panel"><div class="panel-head"><div><span class="panel-kicker">REMINDER QUEUE</span><h2>Payments to follow up</h2></div><span class="soft-chip" id="reminderCountChip">0 pending</span></div><div id="reminderList" class="reminder-list"></div><div id="reminderEmpty" class="empty-state compact-empty"><div class="empty-round">✓</div><strong>All clear</strong><span>No unpaid due reminders right now.</span></div></section>
-          </div>
-          <section class="panel integration-panel"><div><span class="panel-kicker">WORKFLOW</span><h2>How automation works</h2><p>Invoice save → local history → optional webhook → n8n/Make can write Google Sheet, send email, create WhatsApp API task or update your CRM.</p></div><div class="workflow"><span>Invoice</span><i>→</i><span>Webhook</span><i>→</i><span>n8n / Make</span><i>→</i><span>Sheets / CRM</span></div></section>
-        </section>
-
         <!-- SETTINGS -->
         <section class="view" id="settingsView">
           <div class="page-heading"><div><span class="page-kicker">WORKSPACE SETTINGS</span><h1>Brand & billing settings</h1><p>Logo, business details aur PDF branding yahin control karo.</p></div><button class="primary-btn" id="saveSettingsTopBtn">Save Settings</button></div>
@@ -208,7 +196,6 @@
               <div class="form-grid two"><label><span>Invoice Prefix</span><input id="invoicePrefix" maxlength="10" placeholder="INV" /></label><label><span>Default Due Days</span><input id="defaultDueDays" type="number" min="0" max="90" value="7" /></label></div>
               <label class="block-label space-top"><span>Footer Note</span><input id="footerNote" placeholder="Thank you for your business" /></label>
               <label class="block-label space-top"><span>Payment Details</span><textarea id="paymentDetails" rows="3" placeholder="UPI ID / bank / cash note"></textarea></label>
-              <label class="block-label space-top"><span>WhatsApp Reminder Template</span><textarea id="reminderTemplate" rows="4" placeholder="Hi {name}, invoice {invoice} amount {amount} is pending..."></textarea></label>
             </section>
             <section class="panel settings-panel full-span"><div class="panel-head"><div><span class="panel-kicker">DATA</span><h2>Backup & restore</h2></div></div><div class="data-actions"><button class="secondary-btn" id="exportBackupBtn">Export JSON Backup</button><label class="secondary-btn file-btn">Import Backup<input id="importBackupInput" type="file" accept="application/json" hidden /></label><button class="danger-btn" id="clearDataBtn">Clear All Local Data</button></div><p class="settings-note">Data is saved in this browser/device. Regular backup recommended before clearing browser data.</p></section>
           </div>
@@ -221,7 +208,7 @@
     <button class="mobile-nav active" data-view="dashboard"><span>⌂</span><small>Home</small></button>
     <button class="mobile-nav" data-view="invoice"><span>＋</span><small>New</small></button>
     <button class="mobile-nav" data-view="invoices"><span>▤</span><small>Bills</small></button>
-    <button class="mobile-nav" data-view="automation"><span>⚡</span><small>Automation</small></button>
+    <button class="mobile-nav" data-view="parts"><span>◇</span><small>Parts</small></button>
     <button class="mobile-nav" data-view="settings"><span>⚙</span><small>Settings</small></button>
   </nav>
 

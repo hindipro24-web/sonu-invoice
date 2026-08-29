@@ -7,21 +7,17 @@
     sequence: 'spb_pro_sequence_v1',
     draft: 'spb_pro_draft_v1',
     customParts: 'spb_pro_custom_parts_v1',
-    rates: 'spb_pro_rate_overrides_v1',
-    automation: 'spb_pro_automation_v1'
+    rates: 'spb_pro_rate_overrides_v1'
   };
 
   const DEFAULT_SETTINGS = {
     businessName: 'Smart Parts Billing', businessPhone: '', businessAddress: '',
     invoicePrefix: 'INV', defaultDueDays: 7, footerNote: 'Thank you for your business.',
     paymentDetails: '', logo: '',
-    reminderTemplate: 'Hi {name}, reminder for invoice {invoice}. Pending amount: {amount}. Due date: {due}. Thank you.'
   };
-  const DEFAULT_AUTOMATION = { autoDraft: true, dueReminder: true, webhook: false, webhookUrl: '' };
 
   let invoices = readJSON(KEYS.invoices, []);
   let settings = { ...DEFAULT_SETTINGS, ...readJSON(KEYS.settings, {}) };
-  let automation = { ...DEFAULT_AUTOMATION, ...readJSON(KEYS.automation, {}) };
   let customParts = readJSON(KEYS.customParts, []);
   let rateOverrides = readJSON(KEYS.rates, {});
   let currentItems = [];
@@ -50,14 +46,13 @@
     invoiceSearch: $('invoiceSearch'), invoiceStatusFilter: $('invoiceStatusFilter'), invoiceTableBody: $('invoiceTableBody'), invoiceEmpty: $('invoiceEmpty'),
     customerSearch: $('customerSearch'), customerGrid: $('customerGrid'), customerEmpty: $('customerEmpty'),
     catalogSearch: $('catalogSearch'), partsTableBody: $('partsTableBody'), partsCountChip: $('partsCountChip'),
-    autoDraftToggle: $('autoDraftToggle'), dueReminderToggle: $('dueReminderToggle'), webhookToggle: $('webhookToggle'), webhookUrl: $('webhookUrl'), reminderList: $('reminderList'), reminderEmpty: $('reminderEmpty'), reminderCountChip: $('reminderCountChip'),
-    businessName: $('businessName'), businessPhone: $('businessPhone'), businessAddress: $('businessAddress'), invoicePrefix: $('invoicePrefix'), defaultDueDays: $('defaultDueDays'), footerNote: $('footerNote'), paymentDetails: $('paymentDetails'), reminderTemplate: $('reminderTemplate'), logoUpload: $('logoUpload'),
+    businessName: $('businessName'), businessPhone: $('businessPhone'), businessAddress: $('businessAddress'), invoicePrefix: $('invoicePrefix'), defaultDueDays: $('defaultDueDays'), footerNote: $('footerNote'), paymentDetails: $('paymentDetails'), logoUpload: $('logoUpload'),
     pdfPreviewModal: $('pdfPreviewModal'), pdfPreviewFrame: $('pdfPreviewFrame'), previewTitle: $('previewTitle'), toast: $('toast')
   };
 
   const VIEW_META = {
     dashboard: ['OVERVIEW','Dashboard'], invoice: ['BILLING','New Invoice'], invoices: ['RECORDS','Invoices'],
-    customers: ['CRM','Customers'], parts: ['MASTER DATA','Parts Master'], automation: ['WORKFLOW','Automation Center'], settings: ['WORKSPACE','Settings']
+    customers: ['CRM','Customers'], parts: ['MASTER DATA','Parts Master'], settings: ['WORKSPACE','Settings']
   };
 
   function readJSON(key, fallback){ try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; } catch { return fallback; } }
@@ -101,7 +96,6 @@
     if(view==='invoices') renderInvoices();
     if(view==='customers') renderCustomers();
     if(view==='parts') renderParts();
-    if(view==='automation') renderAutomation();
     if(view==='settings') loadSettingsForm();
     window.scrollTo({top:0,behavior:'smooth'});
   }
@@ -150,7 +144,6 @@
     else { invoices.unshift(inv); currentInvoiceId=inv.id; bumpSequence(); }
     saveJSON(KEYS.invoices,invoices); localStorage.removeItem(KEYS.draft); refreshCounts(); renderDashboard();
     toast(existingIndex>=0?'Invoice updated':'Invoice saved successfully');
-    if(automation.webhook && automation.webhookUrl) sendWebhook(inv,false);
     return inv;
   }
 
@@ -194,20 +187,9 @@
 
   function updateSummary(){ const t=totals(); els.itemCount.textContent=String(currentItems.length); els.subtotal.textContent=money(t.subtotal); els.discountSummary.textContent=`− ${money(t.discount)}`; els.chargesSummary.textContent=money(t.charges); els.grandTotal.textContent=money(t.total); }
 
-  function scheduleDraft(){
-    if(!automation.autoDraft) return;
-    clearTimeout(draftTimer); draftTimer=setTimeout(()=>{
-      const draft=collectInvoice(); draft.isDraft=true; saveJSON(KEYS.draft,draft); const a=$('autosaveText'); if(a){a.textContent='Draft saved just now';setTimeout(()=>a.textContent='Auto-draft enabled',1300)}
-    },650);
-  }
+  function scheduleDraft(){ /* draft saving disabled */ }
 
-  function restoreDraft(){
-    const d=readJSON(KEYS.draft,null); if(!d || !automation.autoDraft) return false;
-    const meaningful=d.customer?.name || d.items?.length || d.note; if(!meaningful) return false;
-    currentInvoiceId=null; els.invoiceNoTop.textContent=d.invoiceNo||nextInvoiceNo(); els.summaryInvoiceNo.textContent=d.invoiceNo||nextInvoiceNo();
-    els.customerName.value=d.customer?.name||''; els.customerPhone.value=d.customer?.phone||''; els.customerAddress.value=d.customer?.address||''; els.invoiceDate.value=d.date||todayISO(); els.dueDate.value=d.dueDate||addDaysISO(todayISO(),settings.defaultDueDays);
-    els.paymentStatus.value=d.paymentStatus||'Unpaid'; els.referenceNo.value=d.referenceNo||''; els.discount.value=String(d.discount||0); els.otherCharges.value=String(d.otherCharges||0); els.invoiceNote.value=d.note||''; currentItems=(d.items||[]).map(i=>({...i})); renderItems(); updateSummary(); return true;
-  }
+  function restoreDraft(){ return false; }
 
   function renderDashboard(){
     const totalBilled=invoices.reduce((s,i)=>s+num(i.total),0); const unpaid=invoices.filter(i=>i.paymentStatus!=='Paid').reduce((s,i)=>s+num(i.total),0);
@@ -215,11 +197,8 @@
     $('metricInvoices').textContent=invoices.length; $('metricRevenue').textContent=compactMoney(totalBilled); $('metricUnpaid').textContent=compactMoney(unpaid); $('metricMonth').textContent=compactMoney(monthTotal); $('metricMonthHint').textContent=`${monthInv.length} invoice${monthInv.length===1?'':'s'}`;
     $('metricInvoiceHint').textContent=invoices.length?`${invoices.filter(i=>i.paymentStatus==='Paid').length} paid`:'No bills yet'; $('metricUnpaidHint').textContent=unpaid?'Payment follow-up needed':'Nothing pending'; $('invoiceNavCount').textContent=invoices.length;
     const recent=invoices.slice(0,6); $('recentInvoices').innerHTML=recent.map(inv=>`<div class="recent-row"><div><strong>${esc(inv.invoiceNo)}</strong><span>${formatDate(inv.date)}</span></div><div><strong>${esc(inv.customer?.name||'—')}</strong><span>${esc(inv.customer?.phone||'No mobile')}</span></div><span class="status-badge ${statusClass(effectiveStatus(inv))}">${esc(effectiveStatus(inv))}</span><strong class="amount-text">${money(inv.total)}</strong></div>`).join(''); $('recentEmpty').hidden=recent.length>0;
-    renderDuePreview();
   }
 
-  function dueInvoices(){ if(!automation.dueReminder) return []; return invoices.filter(i=>i.paymentStatus!=='Paid' && i.dueDate && diffDays(i.dueDate)<=3).sort((a,b)=>diffDays(a.dueDate)-diffDays(b.dueDate)); }
-  function renderDuePreview(){ const due=dueInvoices().slice(0,3); $('duePreview').innerHTML=due.length?due.map(i=>`<div class="due-mini"><div><strong>${esc(i.invoiceNo)} • ${esc(i.customer?.name||'Customer')}</strong><span>${diffDays(i.dueDate)<0?`${Math.abs(diffDays(i.dueDate))} day overdue`:`Due ${formatDate(i.dueDate)}`}</span></div><b>${money(i.total)}</b></div>`).join(''):`<div class="due-mini"><div><strong>No payment alerts</strong><span>All current invoices are clear.</span></div><b>✓</b></div>`; }
 
   function renderInvoices(){
     const q=(els.invoiceSearch.value||'').trim().toLowerCase(), f=els.invoiceStatusFilter.value||'All';
@@ -247,31 +226,9 @@
     $$('[data-part-del]').forEach(b=>b.addEventListener('click',()=>{if(confirm('Delete custom part?')){customParts=customParts.filter(x=>x._key!==b.dataset.partDel);saveJSON(KEYS.customParts,customParts);delete rateOverrides[b.dataset.partDel];saveJSON(KEYS.rates,rateOverrides);renderParts()}}));
   }
 
-  function renderAutomation(){
-    els.autoDraftToggle.checked=!!automation.autoDraft; els.dueReminderToggle.checked=!!automation.dueReminder; els.webhookToggle.checked=!!automation.webhook; els.webhookUrl.value=automation.webhookUrl||'';
-    const activeCount=[automation.autoDraft,automation.dueReminder,automation.webhook].filter(Boolean).length; $('automationScore').textContent=String(activeCount);
-    const due=dueInvoices(); els.reminderCountChip.textContent=`${due.length} pending`; els.reminderEmpty.hidden=due.length>0;
-    els.reminderList.innerHTML=due.map(i=>`<div class="reminder-row"><div><strong>${esc(i.customer?.name||'Customer')} • ${esc(i.invoiceNo)}</strong><span>${diffDays(i.dueDate)<0?`${Math.abs(diffDays(i.dueDate))} day overdue`:`Due in ${diffDays(i.dueDate)} day`} • ${formatDate(i.dueDate)}</span><div class="reminder-actions"><button class="tiny-btn" data-rem-open="${i.id}">Open</button><button class="tiny-btn" data-rem-wa="${i.id}">WhatsApp</button></div></div><strong class="reminder-amount">${money(i.total)}</strong></div>`).join('');
-    $$('[data-rem-open]').forEach(b=>b.addEventListener('click',()=>openInvoice(b.dataset.remOpen))); $$('[data-rem-wa]').forEach(b=>b.addEventListener('click',()=>sendReminder(b.dataset.remWa)));
-  }
-
-  function saveAutomation(){ automation={autoDraft:els.autoDraftToggle.checked,dueReminder:els.dueReminderToggle.checked,webhook:els.webhookToggle.checked,webhookUrl:els.webhookUrl.value.trim()};saveJSON(KEYS.automation,automation);renderAutomation();renderDashboard();$('autosaveText').textContent=automation.autoDraft?'Auto-draft enabled':'Auto-draft disabled'; }
-
-  function sendReminder(id){ const inv=invoices.find(i=>i.id===id); if(!inv)return; const phone=normalizePhone(inv.customer?.phone); if(!phone){toast('Customer mobile missing');return;} const msg=(settings.reminderTemplate||DEFAULT_SETTINGS.reminderTemplate).replaceAll('{name}',inv.customer?.name||'').replaceAll('{invoice}',inv.invoiceNo).replaceAll('{amount}',money(inv.total)).replaceAll('{due}',formatDate(inv.dueDate)); window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`,'_blank','noopener'); }
-
-  async function sendWebhook(inv,test=false){
-    const url=(els.webhookUrl?.value||automation.webhookUrl||'').trim(); if(!url){toast('Webhook URL add karo');return false;}
-    const payload=test?{event:'smart_billing_test',time:new Date().toISOString(),source:'Smart Parts Billing Pro'}:{event:'invoice.saved',invoice:inv,source:'Smart Parts Billing Pro',sentAt:new Date().toISOString()};
-    try{ const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); if(!r.ok) throw new Error(`HTTP ${r.status}`); toast(test?'Webhook test successful':'Webhook automation sent');return true; }
-    catch(err){
-      try{ await fetch(url,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify(payload)});toast(test?'Webhook request sent (no-CORS mode)':'Webhook request sent');return true; }
-      catch{ toast('Webhook failed — URL/CORS check karo');return false; }
-    }
-  }
-
-  function loadSettingsForm(){ els.businessName.value=settings.businessName||'';els.businessPhone.value=settings.businessPhone||'';els.businessAddress.value=settings.businessAddress||'';els.invoicePrefix.value=settings.invoicePrefix||'INV';els.defaultDueDays.value=settings.defaultDueDays??7;els.footerNote.value=settings.footerNote||'';els.paymentDetails.value=settings.paymentDetails||'';els.reminderTemplate.value=settings.reminderTemplate||DEFAULT_SETTINGS.reminderTemplate;updateBrand(); }
+  function loadSettingsForm(){ els.businessName.value=settings.businessName||'';els.businessPhone.value=settings.businessPhone||'';els.businessAddress.value=settings.businessAddress||'';els.invoicePrefix.value=settings.invoicePrefix||'INV';els.defaultDueDays.value=settings.defaultDueDays??7;els.footerNote.value=settings.footerNote||'';els.paymentDetails.value=settings.paymentDetails||'';updateBrand(); }
   function saveSettings(){
-    settings={...settings,businessName:els.businessName.value.trim()||'Smart Parts Billing',businessPhone:els.businessPhone.value.trim(),businessAddress:els.businessAddress.value.trim(),invoicePrefix:(els.invoicePrefix.value.trim()||'INV').toUpperCase(),defaultDueDays:Math.max(0,num(els.defaultDueDays.value)),footerNote:els.footerNote.value.trim(),paymentDetails:els.paymentDetails.value.trim(),reminderTemplate:els.reminderTemplate.value.trim()||DEFAULT_SETTINGS.reminderTemplate}; saveJSON(KEYS.settings,settings); updateBrand(); toast('Settings saved'); if(!currentInvoiceId && currentItems.length===0){const n=nextInvoiceNo();els.invoiceNoTop.textContent=n;els.summaryInvoiceNo.textContent=n;}
+    settings={...settings,businessName:els.businessName.value.trim()||'Smart Parts Billing',businessPhone:els.businessPhone.value.trim(),businessAddress:els.businessAddress.value.trim(),invoicePrefix:(els.invoicePrefix.value.trim()||'INV').toUpperCase(),defaultDueDays:Math.max(0,num(els.defaultDueDays.value)),footerNote:els.footerNote.value.trim(),paymentDetails:els.paymentDetails.value.trim()}; saveJSON(KEYS.settings,settings); updateBrand(); toast('Settings saved'); if(!currentInvoiceId && currentItems.length===0){const n=nextInvoiceNo();els.invoiceNoTop.textContent=n;els.summaryInvoiceNo.textContent=n;}
   }
 
   function resizeLogo(file){ return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>{const img=new Image();img.onload=()=>{const max=360,scale=Math.min(1,max/Math.max(img.width,img.height)),w=Math.max(1,Math.round(img.width*scale)),h=Math.max(1,Math.round(img.height*scale));const c=document.createElement('canvas');c.width=w;c.height=h;const ctx=c.getContext('2d');ctx.clearRect(0,0,w,h);ctx.drawImage(img,0,0,w,h);resolve(c.toDataURL('image/png',.92));};img.onerror=reject;img.src=reader.result;};reader.onerror=reject;reader.readAsDataURL(file);}); }
@@ -285,7 +242,7 @@
   function getJsPDF(){ return window.jspdf?.jsPDF || null; }
   function fitText(doc,text,maxWidth){ const lines=doc.splitTextToSize(String(text||''),maxWidth); return lines.slice(0,2); }
   function addPdfPageBase(doc, pageNo, invoiceNo){
-    const W=210; doc.setFillColor(12,35,57);doc.rect(0,0,W,8,'F');doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(120,132,144);doc.text(`Page ${pageNo}`,198,291,{align:'right'});doc.text(`${invoiceNo} • Smart Parts Billing Pro`,12,291);doc.setDrawColor(226,232,238);doc.line(12,286,198,286);
+    const W=210; doc.setFillColor(12,35,57);doc.rect(0,0,W,8,'F');doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(120,132,144);doc.text(`Page ${pageNo}`,198,291,{align:'right'});doc.text(`${invoiceNo} • Smart Parts Billing`,12,291);doc.setDrawColor(226,232,238);doc.line(12,286,198,286);
   }
   function drawTableHeader(doc,y){
     doc.setFillColor(238,243,248);doc.roundedRect(12,y,186,8,1.4,1.4,'F');doc.setFont('helvetica','bold');doc.setFontSize(7.2);doc.setTextColor(75,91,106);
@@ -335,8 +292,8 @@
   }
   function downloadInvoiceById(id){const inv=invoices.find(x=>x.id===id);if(inv)downloadPDF(inv);}
 
-  function exportBackup(){ const data={app:'Smart Parts Billing Pro',version:1,exportedAt:new Date().toISOString(),settings,automation,invoices,customParts,rateOverrides,sequence:Number(localStorage.getItem(KEYS.sequence)||1)};const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`smart-billing-backup-${todayISO()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);toast('Backup exported'); }
-  async function importBackup(file){ try{const data=JSON.parse(await file.text());if(!data||!Array.isArray(data.invoices))throw new Error('Invalid');settings={...DEFAULT_SETTINGS,...(data.settings||{})};automation={...DEFAULT_AUTOMATION,...(data.automation||{})};invoices=data.invoices||[];customParts=data.customParts||[];rateOverrides=data.rateOverrides||{};saveJSON(KEYS.settings,settings);saveJSON(KEYS.automation,automation);saveJSON(KEYS.invoices,invoices);saveJSON(KEYS.customParts,customParts);saveJSON(KEYS.rates,rateOverrides);localStorage.setItem(KEYS.sequence,String(data.sequence||1));updateBrand();loadSettingsForm();refreshCounts();renderDashboard();toast('Backup imported successfully');}catch{toast('Invalid backup file');} }
+  function exportBackup(){ const data={app:'Smart Parts Billing',version:1,exportedAt:new Date().toISOString(),settings,invoices,customParts,rateOverrides,sequence:Number(localStorage.getItem(KEYS.sequence)||1)};const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`smart-billing-backup-${todayISO()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);toast('Backup exported'); }
+  async function importBackup(file){ try{const data=JSON.parse(await file.text());if(!data||!Array.isArray(data.invoices))throw new Error('Invalid');settings={...DEFAULT_SETTINGS,...(data.settings||{})};invoices=data.invoices||[];customParts=data.customParts||[];rateOverrides=data.rateOverrides||{};saveJSON(KEYS.settings,settings);saveJSON(KEYS.invoices,invoices);saveJSON(KEYS.customParts,customParts);saveJSON(KEYS.rates,rateOverrides);localStorage.setItem(KEYS.sequence,String(data.sequence||1));updateBrand();loadSettingsForm();refreshCounts();renderDashboard();toast('Backup imported successfully');}catch{toast('Invalid backup file');} }
 
   function refreshCounts(){ $('invoiceNavCount').textContent=invoices.length; }
 
@@ -353,9 +310,8 @@
     $('customItemBtn').addEventListener('click',()=>openCustomModal('invoice'));$('partsAddCustomBtn').addEventListener('click',()=>openCustomModal('master'));$$('[data-close-custom]').forEach(x=>x.addEventListener('click',closeCustomModal));$('addCustomItemBtn').addEventListener('click',addCustomItem);
     els.saveBtn.addEventListener('click',saveInvoice);els.previewBtn.addEventListener('click',()=>previewPDF());els.downloadBtn.addEventListener('click',()=>downloadPDF());els.shareBtn.addEventListener('click',()=>sharePDF());els.newBillBtn.addEventListener('click',()=>newInvoice());
     els.invoiceSearch.addEventListener('input',renderInvoices);els.invoiceStatusFilter.addEventListener('change',renderInvoices);els.customerSearch.addEventListener('input',renderCustomers);els.catalogSearch.addEventListener('input',renderParts);
-    [els.autoDraftToggle,els.dueReminderToggle,els.webhookToggle].forEach(el=>el.addEventListener('change',saveAutomation));els.webhookUrl.addEventListener('change',saveAutomation);$('testWebhookBtn').addEventListener('click',()=>{saveAutomation();sendWebhook(null,true)});
     $('saveSettingsTopBtn').addEventListener('click',saveSettings);$('exportBackupBtn').addEventListener('click',exportBackup);$('importBackupInput').addEventListener('change',e=>{const f=e.target.files?.[0];if(f)importBackup(f);e.target.value=''});
-    $('clearDataBtn').addEventListener('click',()=>{if(confirm('All invoices, settings and custom parts delete ho jayenge. Continue?')){Object.values(KEYS).forEach(k=>localStorage.removeItem(k));invoices=[];settings={...DEFAULT_SETTINGS};automation={...DEFAULT_AUTOMATION};customParts=[];rateOverrides={};localStorage.setItem(KEYS.sequence,'1');newInvoice();updateBrand();loadSettingsForm();refreshCounts();renderDashboard();toast('Local data cleared')}});
+    $('clearDataBtn').addEventListener('click',()=>{if(confirm('All invoices, settings and custom parts delete ho jayenge. Continue?')){Object.values(KEYS).forEach(k=>localStorage.removeItem(k));invoices=[];settings={...DEFAULT_SETTINGS};customParts=[];rateOverrides={};localStorage.setItem(KEYS.sequence,'1');newInvoice();updateBrand();loadSettingsForm();refreshCounts();renderDashboard();toast('Local data cleared')}});
     els.logoUpload.addEventListener('change',async e=>{const f=e.target.files?.[0];if(!f)return;if(f.size>5*1024*1024){toast('Logo max 5 MB');e.target.value='';return;}try{settings.logo=await resizeLogo(f);saveJSON(KEYS.settings,settings);updateBrand();toast('Logo updated');}catch{toast('Logo read nahi hua')}e.target.value='';});
     $('removeLogoBtn').addEventListener('click',()=>{settings.logo='';saveJSON(KEYS.settings,settings);updateBrand();toast('Logo removed')});
     $$('[data-close-preview]').forEach(x=>x.addEventListener('click',()=>{els.pdfPreviewModal.hidden=true;if(previewBlobUrl){URL.revokeObjectURL(previewBlobUrl);previewBlobUrl=null}}));$('previewDownloadBtn').addEventListener('click',()=>downloadPDF());
@@ -364,7 +320,7 @@
   function init(){
     updateBrand(); bindEvents(); refreshCounts();
     els.invoiceDate.value=todayISO(); els.dueDate.value=addDaysISO(todayISO(),settings.defaultDueDays); els.invoiceNoTop.textContent=nextInvoiceNo(); els.summaryInvoiceNo.textContent=nextInvoiceNo();
-    loadSettingsForm(); renderItems(); restoreDraft(); renderDashboard(); renderInvoices(); renderCustomers(); renderParts(); renderAutomation();
+    loadSettingsForm(); renderItems(); renderDashboard(); renderInvoices(); renderCustomers(); renderParts();
     if('serviceWorker' in navigator && location.protocol!=='file:') navigator.serviceWorker.register('./sw.js').catch(()=>{});
   }
 
