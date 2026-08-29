@@ -128,9 +128,24 @@ function Shell({ view, setView, settings, invoices, children, onBackup, sidebarO
         </header>
         <div className="content-shell">{children}</div>
       </main>
-      <nav className="mobile-nav">
-        {NAV.slice(0,5).map(([id, label, Icon]) => <button key={id} className={view === id ? 'active' : ''} onClick={() => setView(id)}><Icon size={20}/><span>{label === 'New Invoice' ? 'New' : label.replace(' Master','')}</span></button>)}
-      </nav>
+      {!sidebarOpen && (
+        <motion.nav
+          className="mobile-nav"
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          {NAV.slice(0,5).map(([id, label, Icon]) => (
+            <button
+              key={id}
+              className={view === id ? 'active' : ''}
+              onClick={() => setView(id)}
+            >
+              <Icon size={20}/>
+              <span>{label === 'New Invoice' ? 'New' : label.replace(' Master','')}</span>
+            </button>
+          ))}
+        </motion.nav>
+      )}
     </div>
   )
 }
