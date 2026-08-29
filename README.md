@@ -1,17 +1,47 @@
-# Smart Parts Billing — Professional Client Suite V3
+# Smart Parts Billing — React V4 Ultra
 
-Client-ready non-GST billing software with a professional B2B SaaS interface.
+Premium client-ready Non-GST billing suite rebuilt in React.
 
-## Key improvements
-- Larger, readable typography and 46–50px touch controls
-- Executive navy/white SaaS visual system
-- Professional dashboard hierarchy
-- Cleaner invoice form and sticky invoice summary
-- Clear Save Settings workflow with saved/unsaved state
-- Logo branding in app and PDF
-- Responsive mobile/tablet/desktop layouts with no page-level horizontal overflow
-- Network-first service worker strategy so new deployments are less likely to show stale cached UI
-- Existing working invoice, parts, customer, PDF, backup and local persistence features retained
+## Stack
+- React + Vite
+- Framer Motion animations
+- Three.js live 3D dashboard hero
+- jsPDF + AutoTable professional A4 invoice PDFs
+- LocalStorage persistence (no server required for single-device use)
+- GitHub Actions deployment to GitHub Pages
 
-## Hosting
-Upload all files directly to the GitHub Pages repository root.
+## Included working modules
+- Animated Dashboard
+- New Invoice with customer details
+- Searchable 65-part catalog
+- Quantity +/- and editable rate
+- Custom invoice item
+- Discount / other charges / notes
+- Save and update invoice
+- Invoice history / search / payment status
+- Customer CRM generated from invoices
+- Parts Master with persisted rate changes
+- Settings with real Save state
+- Business logo upload
+- PDF preview, download and Web Share / WhatsApp share-sheet
+- JSON export/import backup
+- Responsive sidebar + mobile bottom navigation
+
+## Local development
+```bash
+npm install
+npm run dev
+```
+
+## Production build
+```bash
+npm install
+npm run build
+```
+
+## GitHub Pages
+The included `.github/workflows/deploy.yml` automatically builds and deploys `dist/` when `main` is pushed.
+`vite.config.js` is already configured for `/sonu-invoice/`.
+
+## Data model note
+This edition is local-first. Invoices, parts and settings are saved in the browser on the current device. For multi-user login, multi-device sync or staff permissions, add a backend such as Supabase in a later cloud edition.

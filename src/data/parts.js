@@ -1,4 +1,4 @@
-window.PARTS = [
+export const DEFAULT_PARTS = [
   {id:1, partNo:'585889106951', description:'CROSS TUBE BUSH', unit:'G-1', rate:0.45},
   {id:2, partNo:'252522120116', description:'5MM SMALL RIB', unit:'G-1', rate:2.25},
   {id:3, partNo:'278324200103', description:'7MM RIB', unit:'G-1', rate:4.39},
