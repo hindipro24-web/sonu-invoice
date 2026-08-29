@@ -1,47 +1,23 @@
-# Smart Parts Billing — React V4 Ultra
+# Smart Parts Billing — V5 Clean Pro
 
-Premium client-ready Non-GST billing suite rebuilt in React.
+Client-ready React/Vite non-GST billing app focused on stability, readability, and mobile usability.
 
-## Stack
-- React + Vite
-- Framer Motion animations
-- Three.js live 3D dashboard hero
-- jsPDF + AutoTable professional A4 invoice PDFs
-- LocalStorage persistence (no server required for single-device use)
-- GitHub Actions deployment to GitHub Pages
+## V5 changes
+- Removed Three.js/WebGL and continuous 3D rendering
+- Removed fixed bottom mobile navigation
+- Removed fixed/sticky mobile Settings save bar
+- Standard browser vertical scrolling restored
+- Mobile drawer remains the only navigation on small screens
+- Replaced heavy 3D hero with a lightweight premium invoice preview animation
+- Removed backdrop-filter-heavy glass layers
+- Larger, clearer typography and controls
+- Responsive card/table layouts without page-level horizontal drag
+- Existing invoice, parts, customers, settings, PDF and backup features retained
 
-## Included working modules
-- Animated Dashboard
-- New Invoice with customer details
-- Searchable 65-part catalog
-- Quantity +/- and editable rate
-- Custom invoice item
-- Discount / other charges / notes
-- Save and update invoice
-- Invoice history / search / payment status
-- Customer CRM generated from invoices
-- Parts Master with persisted rate changes
-- Settings with real Save state
-- Business logo upload
-- PDF preview, download and Web Share / WhatsApp share-sheet
-- JSON export/import backup
-- Responsive sidebar + mobile bottom navigation
-
-## Local development
-```bash
-npm install
-npm run dev
-```
-
-## Production build
+## Build
 ```bash
 npm install
 npm run build
 ```
 
-## GitHub Pages
-The included `.github/workflows/deploy.yml` automatically builds and deploys `dist/` when `main` is pushed.
-`vite.config.js` is already configured for `/sonu-invoice/`.
-
-## Data model note
-This edition is local-first. Invoices, parts and settings are saved in the browser on the current device. For multi-user login, multi-device sync or staff permissions, add a backend such as Supabase in a later cloud edition.
+GitHub Pages workflow is included.

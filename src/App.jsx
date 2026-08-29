@@ -4,9 +4,8 @@ import {
   LayoutDashboard, FilePlus2, ReceiptText, Users, Boxes, Settings, Search, Plus, Minus,
   Trash2, Download, Share2, Eye, Save, Upload, Building2, Phone, MapPin, CreditCard,
   CheckCircle2, Clock3, IndianRupee, TrendingUp, Menu, X, ChevronRight, Pencil, FileDown,
-  RefreshCw, ShieldCheck, Sparkles, PackagePlus, BadgeCheck, WalletCards, Database, ArrowUpRight,
+  RefreshCw, ShieldCheck, Sparkles, PackagePlus, BadgeCheck, Database, ArrowUpRight,
 } from 'lucide-react'
-import ThreeHero from './components/ThreeHero.jsx'
 import { DEFAULT_PARTS } from './data/parts.js'
 import { DEFAULT_SETTINGS, storage } from './lib/storage.js'
 import { buildInvoicePdf, downloadInvoicePdf, shareInvoicePdf } from './lib/pdf.js'
@@ -103,7 +102,7 @@ function Shell({ view, setView, settings, invoices, children, onBackup, sidebarO
       <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
         <div className="brand-row">
           <LogoMark settings={settings}/>
-          <div className="brand-copy"><strong>{settings.businessName || 'Smart Parts Billing'}</strong><span>ULTRA CLIENT SUITE</span></div>
+          <div className="brand-copy"><strong>{settings.businessName || 'Smart Parts Billing'}</strong><span>PROFESSIONAL BILLING SUITE</span></div>
           <button className="icon-btn mobile-close" onClick={() => setSidebarOpen(false)}><X size={20}/></button>
         </div>
         <div className="workspace-pill"><ShieldCheck size={16}/><div><strong>Private workspace</strong><span>Local-first billing</span></div></div>
@@ -117,7 +116,7 @@ function Shell({ view, setView, settings, invoices, children, onBackup, sidebarO
         </nav>
         <div className="sidebar-foot">
           <button className="backup-btn" onClick={onBackup}><Database size={18}/><div><strong>Export backup</strong><span>Keep a safe copy</span></div><ChevronRight size={17}/></button>
-          <div className="version-row"><span>V4 Ultra</span><BadgeCheck size={15}/></div>
+          <div className="version-row"><span>V5 Clean Pro</span><BadgeCheck size={15}/></div>
         </div>
       </aside>
       {sidebarOpen && <button className="sidebar-scrim" aria-label="Close menu" onClick={() => setSidebarOpen(false)} />}
@@ -128,24 +127,7 @@ function Shell({ view, setView, settings, invoices, children, onBackup, sidebarO
         </header>
         <div className="content-shell">{children}</div>
       </main>
-      {!sidebarOpen && (
-        <motion.nav
-          className="mobile-nav"
-          initial={{ opacity: 0, y: 18 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          {NAV.slice(0,5).map(([id, label, Icon]) => (
-            <button
-              key={id}
-              className={view === id ? 'active' : ''}
-              onClick={() => setView(id)}
-            >
-              <Icon size={20}/>
-              <span>{label === 'New Invoice' ? 'New' : label.replace(' Master','')}</span>
-            </button>
-          ))}
-        </motion.nav>
-      )}
+
     </div>
   )
 }
@@ -169,7 +151,16 @@ function Dashboard({ invoices, settings, setView }) {
         <div className="hero-actions"><button className="primary-btn hero-primary" onClick={()=>setView('invoice')}><FilePlus2 size={19}/> Create Invoice</button><button className="ghost-btn" onClick={()=>setView('invoices')}><ReceiptText size={18}/> View Invoices</button></div>
         <div className="hero-proof"><span><CheckCircle2 size={15}/> Non-GST ready</span><span><CheckCircle2 size={15}/> PDF aligned</span><span><CheckCircle2 size={15}/> Mobile friendly</span></div>
       </div>
-      <div className="hero-visual"><ThreeHero/><div className="float-chip chip-one"><WalletCards size={17}/><div><span>Total billed</span><strong>{money(totals.total)}</strong></div></div><div className="float-chip chip-two"><ShieldCheck size={17}/><div><span>Workspace</span><strong>Private</strong></div></div></div>
+      <div className="hero-visual">
+        <div className="hero-orb" aria-hidden="true"/>
+        <div className="hero-invoice-card">
+          <div className="hero-invoice-top"><ReceiptText size={18}/><span>Invoice workspace</span></div>
+          <div className="hero-invoice-business">{settings.businessName || 'Your Business'}</div>
+          <div className="hero-invoice-row"><span>Next invoice</span><strong>{settings.invoicePrefix || 'INV'}-0001</strong></div>
+          <div className="hero-invoice-lines"><i/><i/><i/></div>
+          <div className="hero-invoice-total"><span>Total billed</span><strong>{money(totals.total)}</strong></div>
+        </div>
+      </div>
     </section>
 
     <div className="metrics-grid">
@@ -336,7 +327,7 @@ function SettingsPage({ settings, setSettings, showToast, onImport }) {
   const patch=(p)=>{setDraft(d=>({...d,...p}));setDirty(true)}
   const uploadLogo=(file)=>{if(!file)return; if(file.size>2*1024*1024)return showToast('Logo must be under 2 MB','error'); const r=new FileReader();r.onload=()=>patch({logo:r.result});r.readAsDataURL(file)}
   const save=()=>{storage.saveSettings(draft);setSettings(draft);setDirty(false);showToast('Settings saved successfully')}
-  return <motion.div className="page settings-page" initial={{opacity:0,y:12}} animate={{opacity:1,y:0}}><PageHeader eyebrow="WORKSPACE SETTINGS" title="Brand & Billing Settings" text="Control how your business appears inside the app and on every PDF." action={<button className="primary-btn desktop-save" disabled={!dirty} onClick={save}><Save size={18}/> Save Changes</button>} />
+  return <motion.div className="page settings-page" initial={{opacity:0,y:12}} animate={{opacity:1,y:0}}><PageHeader eyebrow="WORKSPACE SETTINGS" title="Brand & Billing Settings" text="Control how your business appears inside the app and on every PDF." action={<button className="primary-btn settings-save-action" disabled={!dirty} onClick={save}><Save size={18}/> Save Changes</button>} />
     <div className="settings-layout">
       <div className="settings-main">
         <Card className="form-card"><div className="section-head"><div><span className="eyebrow">BRANDING</span><h2>Business identity</h2></div><span className={`dirty-chip ${dirty?'dirty':''}`}>{dirty?'Unsaved changes':'All changes saved'}</span></div>
@@ -349,24 +340,7 @@ function SettingsPage({ settings, setSettings, showToast, onImport }) {
       </div>
       <aside className="settings-preview"><Card className="brand-preview-card"><span className="eyebrow">LIVE PREVIEW</span><LogoMark settings={draft} size="xl"/><strong>{draft.businessName||'Business Name'}</strong><span>{draft.phone||'Phone number'}</span><small>{draft.address||'Business address'}</small><div className="mini-invoice"><div><span>INVOICE</span><strong>{draft.invoicePrefix||'INV'}-0001</strong></div><div className="mini-line"/><div className="mini-line short"/><div className="mini-total"><span>Grand Total</span><strong>₹12,450.00</strong></div></div></Card></aside>
     </div>
-    <AnimatePresence>
-      {dirty && (
-        <motion.div
-          className="mobile-save-bar show"
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 24 }}
-        >
-          <div>
-            <strong>Unsaved changes</strong>
-            <span>Save before leaving settings</span>
-          </div>
-          <button className="primary-btn" onClick={save}>
-            <Save size={18}/> Save
-          </button>
-        </motion.div>
-      )}
-    </AnimatePresence>
+
   </motion.div>
 }
 
