@@ -4,8 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#0b1f33" />
-  <meta name="description" content="Smart Parts Billing - futuristic professional non-GST billing software for all devices." />
-  <title>Smart Parts Billing — Future UI</title>
+  <meta name="description" content="Smart Parts Billing - professional non-GST business billing software for mobile, tablet and desktop." />
+  <title>Smart Parts Billing — Client Edition</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="stylesheet" href="styles.css" />
 </head>
@@ -55,9 +55,9 @@
         <section class="view active-view" id="dashboardView">
           <div class="hero-strip">
             <div>
-              <span class="hero-kicker">NEXT-GEN BILLING WORKSPACE</span>
-              <h1 id="dashboardGreeting">Billing that feels effortless.</h1>
-              <p>Invoices, customers, parts aur payments — ek clean professional workspace me.</p>
+              <span class="hero-kicker">BUSINESS BILLING</span>
+              <h1 id="dashboardGreeting">Your billing workspace</h1>
+              <p>Create invoices, manage customers, update part rates and share professional PDFs from one place.</p>
             </div>
             <button class="hero-action" data-view="invoice"><span>＋</span><div><small>Quick action</small><strong>Create Invoice</strong></div></button>
           </div>
@@ -77,9 +77,8 @@
             </section>
 
             <section class="panel workspace-preview">
-              <div class="panel-head"><div><span class="panel-kicker">WORKSPACE</span><h2>Quick access</h2></div><span class="secure-pill">LOCAL</span></div>
-              <div class="workspace-orbit" aria-hidden="true"><span></span><i></i><b></b><em></em></div>
-              <div class="workspace-copy"><strong>Your billing hub is ready</strong><span>Open customers, parts master or branding without leaving the workspace.</span></div>
+              <div class="panel-head"><div><span class="panel-kicker">QUICK ACTIONS</span><h2>Manage your workspace</h2></div><span class="secure-pill">READY</span></div>
+              <div class="workspace-copy"><strong>Everything important, one click away</strong><span>Review customers, update parts and keep your invoice branding accurate.</span></div>
               <div class="quick-grid">
                 <button class="quick-tile" data-view="customers"><span>◎</span><div><strong>Customers</strong><small>Billing history</small></div></button>
                 <button class="quick-tile" data-view="parts"><span>◇</span><div><strong>Parts Master</strong><small>Rates & catalog</small></div></button>
@@ -185,10 +184,10 @@
 
         <!-- SETTINGS -->
         <section class="view" id="settingsView">
-          <div class="page-heading"><div><span class="page-kicker">WORKSPACE SETTINGS</span><h1>Brand & billing settings</h1><p>Logo, business details aur PDF branding yahin control karo.</p></div><button class="primary-btn" id="saveSettingsTopBtn">Save Settings</button></div>
+          <div class="page-heading"><div><span class="page-kicker">WORKSPACE SETTINGS</span><h1>Brand & billing settings</h1><p>Business details, logo and invoice preferences. Changes are saved only when you press Save.</p></div><button class="primary-btn" id="saveSettingsTopBtn">Save changes</button></div>
           <div class="settings-grid">
             <section class="panel settings-panel"><div class="panel-head"><div><span class="panel-kicker">BRANDING</span><h2>Business identity</h2></div></div>
-              <div class="logo-uploader"><div class="logo-preview"><img id="settingsLogoPreview" hidden alt="Logo preview"/><span id="settingsLogoFallback">SP</span></div><div><strong>Business Logo</strong><span>PNG/JPG recommended. PDF aur app header me dikhega.</span><div class="inline-actions"><label class="secondary-btn file-btn">Upload Logo<input id="logoUpload" type="file" accept="image/png,image/jpeg,image/webp" hidden /></label><button class="link-btn danger-link" id="removeLogoBtn">Remove</button></div></div></div>
+              <div class="logo-uploader"><div class="logo-preview"><img id="settingsLogoPreview" hidden alt="Logo preview"/><span id="settingsLogoFallback">SP</span></div><div><strong>Business Logo</strong><span>PNG/JPG recommended. Logo app header and PDF invoice me dikhega.</span><div class="inline-actions"><label class="secondary-btn file-btn">Upload Logo<input id="logoUpload" type="file" accept="image/png,image/jpeg,image/webp" hidden /></label><button class="link-btn danger-link" id="removeLogoBtn">Remove</button></div></div></div>
               <div class="form-grid two space-top"><label><span>Business Name</span><input id="businessName" placeholder="SONU FABRICATION" /></label><label><span>Mobile / Contact</span><input id="businessPhone" placeholder="Phone number" inputmode="tel" /></label></div>
               <label class="block-label space-top"><span>Business Address</span><textarea id="businessAddress" rows="3" placeholder="Full business address"></textarea></label>
             </section>
@@ -197,7 +196,11 @@
               <label class="block-label space-top"><span>Footer Note</span><input id="footerNote" placeholder="Thank you for your business" /></label>
               <label class="block-label space-top"><span>Payment Details</span><textarea id="paymentDetails" rows="3" placeholder="UPI ID / bank / cash note"></textarea></label>
             </section>
-            <section class="panel settings-panel full-span"><div class="panel-head"><div><span class="panel-kicker">DATA</span><h2>Backup & restore</h2></div></div><div class="data-actions"><button class="secondary-btn" id="exportBackupBtn">Export JSON Backup</button><label class="secondary-btn file-btn">Import Backup<input id="importBackupInput" type="file" accept="application/json" hidden /></label><button class="danger-btn" id="clearDataBtn">Clear All Local Data</button></div><p class="settings-note">Data is saved in this browser/device. Regular backup recommended before clearing browser data.</p></section>
+            <section class="panel settings-panel full-span"><div class="panel-head"><div><span class="panel-kicker">DATA</span><h2>Backup & restore</h2></div></div><div class="data-actions"><button class="secondary-btn" id="exportBackupBtn">Export JSON Backup</button><label class="secondary-btn file-btn">Import Backup<input id="importBackupInput" type="file" accept="application/json" hidden /></label><button class="danger-btn" id="clearDataBtn">Clear All Local Data</button></div><p class="settings-note">Data is saved in this browser/device. Export a backup regularly if this software is being used for business records.</p></section>
+          </div>
+          <div class="settings-save-bar" id="settingsSaveBar">
+            <div class="settings-save-copy"><strong>Save workspace settings</strong><span id="settingsSaveState">All changes saved</span></div>
+            <button class="primary-btn" id="saveSettingsBottomBtn">Save changes</button>
           </div>
         </section>
       </div>

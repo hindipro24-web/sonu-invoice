@@ -47,6 +47,7 @@
     customerSearch: $('customerSearch'), customerGrid: $('customerGrid'), customerEmpty: $('customerEmpty'),
     catalogSearch: $('catalogSearch'), partsTableBody: $('partsTableBody'), partsCountChip: $('partsCountChip'),
     businessName: $('businessName'), businessPhone: $('businessPhone'), businessAddress: $('businessAddress'), invoicePrefix: $('invoicePrefix'), defaultDueDays: $('defaultDueDays'), footerNote: $('footerNote'), paymentDetails: $('paymentDetails'), logoUpload: $('logoUpload'),
+    saveSettingsTopBtn: $('saveSettingsTopBtn'), saveSettingsBottomBtn: $('saveSettingsBottomBtn'), settingsSaveBar: $('settingsSaveBar'), settingsSaveState: $('settingsSaveState'),
     pdfPreviewModal: $('pdfPreviewModal'), pdfPreviewFrame: $('pdfPreviewFrame'), previewTitle: $('previewTitle'), toast: $('toast')
   };
 
@@ -187,9 +188,26 @@
 
   function updateSummary(){ const t=totals(); els.itemCount.textContent=String(currentItems.length); els.subtotal.textContent=money(t.subtotal); els.discountSummary.textContent=`− ${money(t.discount)}`; els.chargesSummary.textContent=money(t.charges); els.grandTotal.textContent=money(t.total); }
 
-  function scheduleDraft(){ /* draft saving disabled */ }
+  function scheduleDraft(){
+    clearTimeout(draftTimer);
+    const autoText=$('autosaveText');
+    if(autoText) autoText.textContent='Saving draft…';
+    draftTimer=setTimeout(()=>{
+      const inv=collectInvoice();
+      const hasData=Boolean(inv.customer.name || inv.customer.phone || inv.customer.address || inv.items.length || inv.referenceNo || inv.note || inv.discount || inv.otherCharges);
+      if(hasData){ saveJSON(KEYS.draft,{...inv,draftSavedAt:new Date().toISOString()}); if(autoText) autoText.textContent='Draft saved on this device'; }
+      else { localStorage.removeItem(KEYS.draft); if(autoText) autoText.textContent='Ready'; }
+    },450);
+  }
 
-  function restoreDraft(){ return false; }
+  function restoreDraft(){
+    const inv=readJSON(KEYS.draft,null); if(!inv) return false;
+    currentInvoiceId=inv.id||null; els.invoiceNoTop.textContent=inv.invoiceNo||nextInvoiceNo(); els.summaryInvoiceNo.textContent=inv.invoiceNo||nextInvoiceNo();
+    els.customerName.value=inv.customer?.name||''; els.customerPhone.value=inv.customer?.phone||''; els.customerAddress.value=inv.customer?.address||'';
+    els.invoiceDate.value=inv.date||todayISO(); els.dueDate.value=inv.dueDate||addDaysISO(todayISO(),settings.defaultDueDays); els.paymentStatus.value=inv.paymentStatus||'Unpaid'; els.referenceNo.value=inv.referenceNo||'';
+    els.discount.value=String(inv.discount||0); els.otherCharges.value=String(inv.otherCharges||0); els.invoiceNote.value=inv.note||''; currentItems=(inv.items||[]).map(i=>({...i}));
+    renderItems(); updateSummary(); const autoText=$('autosaveText'); if(autoText) autoText.textContent='Draft restored'; return true;
+  }
 
   function renderDashboard(){
     const totalBilled=invoices.reduce((s,i)=>s+num(i.total),0); const unpaid=invoices.filter(i=>i.paymentStatus!=='Paid').reduce((s,i)=>s+num(i.total),0);
@@ -226,9 +244,15 @@
     $$('[data-part-del]').forEach(b=>b.addEventListener('click',()=>{if(confirm('Delete custom part?')){customParts=customParts.filter(x=>x._key!==b.dataset.partDel);saveJSON(KEYS.customParts,customParts);delete rateOverrides[b.dataset.partDel];saveJSON(KEYS.rates,rateOverrides);renderParts()}}));
   }
 
-  function loadSettingsForm(){ els.businessName.value=settings.businessName||'';els.businessPhone.value=settings.businessPhone||'';els.businessAddress.value=settings.businessAddress||'';els.invoicePrefix.value=settings.invoicePrefix||'INV';els.defaultDueDays.value=settings.defaultDueDays??7;els.footerNote.value=settings.footerNote||'';els.paymentDetails.value=settings.paymentDetails||'';updateBrand(); }
+  function setSettingsState(saved){
+    if(els.settingsSaveBar) els.settingsSaveBar.classList.toggle('dirty',!saved);
+    if(els.settingsSaveState) els.settingsSaveState.textContent=saved?'All changes saved':'Unsaved changes';
+    [els.saveSettingsTopBtn,els.saveSettingsBottomBtn].filter(Boolean).forEach(btn=>{btn.textContent=saved?'Saved ✓':'Save changes';});
+  }
+  function markSettingsDirty(){ setSettingsState(false); }
+  function loadSettingsForm(){ els.businessName.value=settings.businessName||'';els.businessPhone.value=settings.businessPhone||'';els.businessAddress.value=settings.businessAddress||'';els.invoicePrefix.value=settings.invoicePrefix||'INV';els.defaultDueDays.value=settings.defaultDueDays??7;els.footerNote.value=settings.footerNote||'';els.paymentDetails.value=settings.paymentDetails||'';updateBrand();setSettingsState(true); }
   function saveSettings(){
-    settings={...settings,businessName:els.businessName.value.trim()||'Smart Parts Billing',businessPhone:els.businessPhone.value.trim(),businessAddress:els.businessAddress.value.trim(),invoicePrefix:(els.invoicePrefix.value.trim()||'INV').toUpperCase(),defaultDueDays:Math.max(0,num(els.defaultDueDays.value)),footerNote:els.footerNote.value.trim(),paymentDetails:els.paymentDetails.value.trim()}; saveJSON(KEYS.settings,settings); updateBrand(); toast('Settings saved'); if(!currentInvoiceId && currentItems.length===0){const n=nextInvoiceNo();els.invoiceNoTop.textContent=n;els.summaryInvoiceNo.textContent=n;}
+    settings={...settings,businessName:els.businessName.value.trim()||'Smart Parts Billing',businessPhone:els.businessPhone.value.trim(),businessAddress:els.businessAddress.value.trim(),invoicePrefix:(els.invoicePrefix.value.trim()||'INV').toUpperCase(),defaultDueDays:Math.max(0,num(els.defaultDueDays.value)),footerNote:els.footerNote.value.trim(),paymentDetails:els.paymentDetails.value.trim()}; saveJSON(KEYS.settings,settings); updateBrand(); setSettingsState(true); toast('Workspace settings saved'); if(!currentInvoiceId && currentItems.length===0){const n=nextInvoiceNo();els.invoiceNoTop.textContent=n;els.summaryInvoiceNo.textContent=n;}
   }
 
   function resizeLogo(file){ return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>{const img=new Image();img.onload=()=>{const max=360,scale=Math.min(1,max/Math.max(img.width,img.height)),w=Math.max(1,Math.round(img.width*scale)),h=Math.max(1,Math.round(img.height*scale));const c=document.createElement('canvas');c.width=w;c.height=h;const ctx=c.getContext('2d');ctx.clearRect(0,0,w,h);ctx.drawImage(img,0,0,w,h);resolve(c.toDataURL('image/png',.92));};img.onerror=reject;img.src=reader.result;};reader.onerror=reject;reader.readAsDataURL(file);}); }
@@ -310,17 +334,17 @@
     $('customItemBtn').addEventListener('click',()=>openCustomModal('invoice'));$('partsAddCustomBtn').addEventListener('click',()=>openCustomModal('master'));$$('[data-close-custom]').forEach(x=>x.addEventListener('click',closeCustomModal));$('addCustomItemBtn').addEventListener('click',addCustomItem);
     els.saveBtn.addEventListener('click',saveInvoice);els.previewBtn.addEventListener('click',()=>previewPDF());els.downloadBtn.addEventListener('click',()=>downloadPDF());els.shareBtn.addEventListener('click',()=>sharePDF());els.newBillBtn.addEventListener('click',()=>newInvoice());
     els.invoiceSearch.addEventListener('input',renderInvoices);els.invoiceStatusFilter.addEventListener('change',renderInvoices);els.customerSearch.addEventListener('input',renderCustomers);els.catalogSearch.addEventListener('input',renderParts);
-    $('saveSettingsTopBtn').addEventListener('click',saveSettings);$('exportBackupBtn').addEventListener('click',exportBackup);$('importBackupInput').addEventListener('change',e=>{const f=e.target.files?.[0];if(f)importBackup(f);e.target.value=''});
+    els.saveSettingsTopBtn.addEventListener('click',saveSettings); els.saveSettingsBottomBtn?.addEventListener('click',saveSettings); [els.businessName,els.businessPhone,els.businessAddress,els.invoicePrefix,els.defaultDueDays,els.footerNote,els.paymentDetails].forEach(el=>{el.addEventListener('input',markSettingsDirty);el.addEventListener('change',markSettingsDirty)}); $('exportBackupBtn').addEventListener('click',exportBackup);$('importBackupInput').addEventListener('change',e=>{const f=e.target.files?.[0];if(f)importBackup(f);e.target.value=''});
     $('clearDataBtn').addEventListener('click',()=>{if(confirm('All invoices, settings and custom parts delete ho jayenge. Continue?')){Object.values(KEYS).forEach(k=>localStorage.removeItem(k));invoices=[];settings={...DEFAULT_SETTINGS};customParts=[];rateOverrides={};localStorage.setItem(KEYS.sequence,'1');newInvoice();updateBrand();loadSettingsForm();refreshCounts();renderDashboard();toast('Local data cleared')}});
-    els.logoUpload.addEventListener('change',async e=>{const f=e.target.files?.[0];if(!f)return;if(f.size>5*1024*1024){toast('Logo max 5 MB');e.target.value='';return;}try{settings.logo=await resizeLogo(f);saveJSON(KEYS.settings,settings);updateBrand();toast('Logo updated');}catch{toast('Logo read nahi hua')}e.target.value='';});
-    $('removeLogoBtn').addEventListener('click',()=>{settings.logo='';saveJSON(KEYS.settings,settings);updateBrand();toast('Logo removed')});
+    els.logoUpload.addEventListener('change',async e=>{const f=e.target.files?.[0];if(!f)return;if(f.size>5*1024*1024){toast('Logo max 5 MB');e.target.value='';return;}try{settings.logo=await resizeLogo(f);saveJSON(KEYS.settings,settings);updateBrand();setSettingsState(true);toast('Logo saved');}catch{toast('Logo read nahi hua')}e.target.value='';});
+    $('removeLogoBtn').addEventListener('click',()=>{settings.logo='';saveJSON(KEYS.settings,settings);updateBrand();setSettingsState(true);toast('Logo removed')});
     $$('[data-close-preview]').forEach(x=>x.addEventListener('click',()=>{els.pdfPreviewModal.hidden=true;if(previewBlobUrl){URL.revokeObjectURL(previewBlobUrl);previewBlobUrl=null}}));$('previewDownloadBtn').addEventListener('click',()=>downloadPDF());
   }
 
   function init(){
     updateBrand(); bindEvents(); refreshCounts();
     els.invoiceDate.value=todayISO(); els.dueDate.value=addDaysISO(todayISO(),settings.defaultDueDays); els.invoiceNoTop.textContent=nextInvoiceNo(); els.summaryInvoiceNo.textContent=nextInvoiceNo();
-    loadSettingsForm(); renderItems(); renderDashboard(); renderInvoices(); renderCustomers(); renderParts();
+    loadSettingsForm(); if(!restoreDraft()) renderItems(); renderDashboard(); renderInvoices(); renderCustomers(); renderParts();
     if('serviceWorker' in navigator && location.protocol!=='file:') navigator.serviceWorker.register('./sw.js').catch(()=>{});
   }
 
