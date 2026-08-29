@@ -37,3 +37,97 @@
     visibility:visible;
   }
 }
+
+/* ================================
+   MOBILE PERFORMANCE MODE
+   Keeps premium look, reduces GPU repaint
+================================ */
+
+@media (max-width:700px), (pointer:coarse) {
+
+  html {
+    scroll-behavior:auto;
+  }
+
+  body {
+    overscroll-behavior-y:none;
+  }
+
+  .ambient {
+    position:absolute;
+    filter:blur(42px);
+    opacity:.11;
+  }
+
+  .grid-glow {
+    position:absolute;
+    opacity:.55;
+  }
+
+  .glass-card,
+  .topbar,
+  .mobile-nav,
+  .sidebar,
+  .float-chip,
+  .mobile-save-bar {
+    backdrop-filter:none !important;
+    -webkit-backdrop-filter:none !important;
+  }
+
+  .glass-card {
+    background:linear-gradient(
+      180deg,
+      rgba(14,27,45,.985),
+      rgba(9,20,34,.985)
+    );
+  }
+
+  .topbar {
+    background:rgba(5,12,22,.98);
+  }
+
+  .mobile-nav {
+    background:rgba(7,18,31,.99);
+  }
+
+  .sidebar {
+    background:linear-gradient(
+      180deg,
+      #081220,
+      #050c16
+    );
+  }
+
+  .float-chip {
+    background:rgba(8,20,35,.96);
+  }
+
+  .mobile-save-bar {
+    background:rgba(10,24,40,.99);
+  }
+
+  .metric-card,
+  .glass-card,
+  .quick-stack button,
+  .item-row,
+  .rt-row {
+    box-shadow:
+      0 10px 28px rgba(0,0,0,.18),
+      inset 0 1px rgba(255,255,255,.025);
+  }
+
+  .float-chip {
+    animation-duration:7s;
+  }
+
+  .primary-btn:hover,
+  .metric-card:hover {
+    transform:none;
+  }
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .float-chip {
+    animation:none !important;
+  }
+}
