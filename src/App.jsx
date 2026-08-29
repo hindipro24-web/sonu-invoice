@@ -23,13 +23,24 @@ const today = () => new Date().toISOString().slice(0, 10)
 const money = (n) => `₹${Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`)
 
+function nextInvoiceNumber(settings, invoices = []) {
+  const prefix = String(settings.invoicePrefix || 'INV').trim() || 'INV'
+  const escaped = prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const re = new RegExp(`^${escaped}-(\\d+)$`, 'i')
+  let max = 0
+  for (const row of invoices) {
+    const match = String(row.invoiceNo || '').match(re)
+    if (match) max = Math.max(max, Number(match[1]) || 0)
+  }
+  return `${prefix}-${String(max + 1).padStart(4, '0')}`
+}
+
 function blankInvoice(settings, invoices = []) {
-  const next = invoices.length + 1
   return {
     id: uid(),
-    invoiceNo: `${settings.invoicePrefix || 'INV'}-${String(next).padStart(4, '0')}`,
+    invoiceNo: nextInvoiceNumber(settings, invoices),
     customerName: '', phone: '', address: '', date: today(),
-    items: [], discount: 0, otherCharges: 0, referenceNo: '', note: '', savedAt: null,
+    items: [], discount: 0, otherCharges: 0, note: '', savedAt: null,
   }
 }
 
@@ -115,7 +126,7 @@ function Shell({ view, setView, settings, invoices, children, onBackup, sidebarO
       <main className="main-shell">
         <header className="topbar">
           <div className="topbar-left"><button className="icon-btn mobile-menu" onClick={() => setSidebarOpen(true)}><Menu size={21}/></button><div><span>SMART PARTS BILLING</span><strong>{NAV.find(x => x[0] === view)?.[1]}</strong></div></div>
-          <div className="topbar-right"><span className="online-pill"><i/>Workspace ready</span><button className="primary-btn top-new" onClick={() => setView('invoice')}><Plus size={18}/> New Invoice</button></div>
+          <div className="topbar-right"><span className="online-pill"><i/>Workspace ready</span><button className="primary-btn top-new" onClick={() => setView('invoice')}><Plus size={18}/><span>New Invoice</span></button></div>
         </header>
         <div className="content-shell">{children}</div>
       </main>
@@ -127,19 +138,10 @@ function Shell({ view, setView, settings, invoices, children, onBackup, sidebarO
 function Dashboard({ invoices, settings, setView }) {
   const totals = useMemo(() => {
     const total = invoices.reduce((s, i) => s + Number(i.total || 0), 0)
-    const customerCount = new Set(
-      invoices
-        .map(i => String(i.customerName || '').trim().toLowerCase())
-        .filter(Boolean)
-    ).size
+    const customerCount = new Set(invoices.map(i => String(i.customerName || '').trim().toLowerCase()).filter(Boolean)).size
     const month = new Date().toISOString().slice(0,7)
     const monthInv = invoices.filter(i => String(i.date || '').startsWith(month))
-    return {
-      total,
-      customerCount,
-      month: monthInv.reduce((s,i)=>s+Number(i.total||0),0),
-      monthCount: monthInv.length
-    }
+    return { total, customerCount, month: monthInv.reduce((s,i)=>s+Number(i.total||0),0), monthCount: monthInv.length }
   }, [invoices])
   const latest = [...invoices].sort((a,b)=>String(b.savedAt||'').localeCompare(String(a.savedAt||''))).slice(0,5)
 
@@ -200,6 +202,7 @@ function InvoiceEditor({ invoice, setInvoice, parts, settings, invoices, onSave,
   }, [query, parts])
 
   useEffect(() => {
+    if (invoice.savedAt) return undefined
     const t = setTimeout(() => storage.saveDraft(invoice), 350)
     return () => clearTimeout(t)
   }, [invoice])
@@ -235,7 +238,7 @@ function InvoiceEditor({ invoice, setInvoice, parts, settings, invoices, onSave,
     <div className="invoice-layout">
       <div className="invoice-workspace">
         <Card className="form-card">
-          <div className="section-head"><div><span className="eyebrow">01 • CUSTOMER</span><h2>Billing details</h2></div><span className="save-state"><i/> Draft autosaved</span></div>
+          <div className="section-head"><div><span className="eyebrow">01 • CUSTOMER</span><h2>Billing details</h2></div><span className="save-state"><i/> {invoice.savedAt ? 'Saved invoice' : 'Draft autosaved'}</span></div>
           <div className="form-grid cols-3">
             <Field label="Customer Name *"><input value={invoice.customerName} onChange={e=>setInvoice({...invoice,customerName:e.target.value})} placeholder="Enter customer name" /></Field>
             <Field label="Mobile"><input value={invoice.phone} onChange={e=>setInvoice({...invoice,phone:e.target.value})} placeholder="Mobile number" inputMode="tel" /></Field>
@@ -256,12 +259,7 @@ function InvoiceEditor({ invoice, setInvoice, parts, settings, invoices, onSave,
             <div className="items-header"><span>PART DETAILS</span><span>SIZE</span><span>QTY</span><span>RATE</span><span>AMOUNT</span><span/></div>
             {invoice.items.map(item => <motion.div layout className="item-row" key={item.id}>
               <div className="item-desc"><span className="item-code">{item.partNo}</span><strong>{item.description}</strong><small>{item.unit}</small></div>
-              <input
-                className="size-input"
-                value={item.size || ''}
-                placeholder="12mm"
-                onChange={e=>updateItem(item.id,{size:e.target.value})}
-              />
+              <input className="size-input" value={item.size || ''} placeholder="12mm" onChange={e=>updateItem(item.id,{size:e.target.value})}/>
               <div className="qty-control"><button onClick={()=>updateItem(item.id,{qty:Math.max(1,Number(item.qty)-1)})}><Minus size={16}/></button><input value={item.qty} inputMode="numeric" onChange={e=>updateItem(item.id,{qty:Math.max(1,Number(e.target.value)||1)})}/><button onClick={()=>updateItem(item.id,{qty:Number(item.qty)+1})}><Plus size={16}/></button></div>
               <div className="money-input"><span>₹</span><input value={item.rate} inputMode="decimal" onChange={e=>updateItem(item.id,{rate:Number(e.target.value)})}/></div>
               <strong className="line-total">{money(Number(item.qty)*Number(item.rate))}</strong>
@@ -272,8 +270,8 @@ function InvoiceEditor({ invoice, setInvoice, parts, settings, invoices, onSave,
 
         <Card className="form-card">
           <div className="section-head"><div><span className="eyebrow">03 • FINAL DETAILS</span><h2>Adjustments & notes</h2></div></div>
-          <div className="form-grid cols-3"><Field label="Discount (₹)"><input type="number" min="0" value={invoice.discount} onChange={e=>setInvoice({...invoice,discount:Number(e.target.value)})}/></Field><Field label="Other Charges (₹)"><input type="number" min="0" value={invoice.otherCharges} onChange={e=>setInvoice({...invoice,otherCharges:Number(e.target.value)})}/></Field><Field label="Reference / PO"><input value={invoice.referenceNo} onChange={e=>setInvoice({...invoice,referenceNo:e.target.value})} placeholder="Optional" /></Field></div>
-          <Field label="Invoice Note" className="mt-16"><textarea rows="3" value={invoice.note} onChange={e=>setInvoice({...invoice,note:e.target.value})} placeholder="Delivery or payment note" /></Field>
+          <div className="form-grid cols-2"><Field label="Discount (₹)"><input type="number" min="0" value={invoice.discount} onChange={e=>setInvoice({...invoice,discount:Number(e.target.value)})}/></Field><Field label="Other Charges (₹)"><input type="number" min="0" value={invoice.otherCharges} onChange={e=>setInvoice({...invoice,otherCharges:Number(e.target.value)})}/></Field></div>
+          <Field label="Invoice Note" className="mt-16"><textarea rows="3" value={invoice.note} onChange={e=>setInvoice({...invoice,note:e.target.value})} placeholder="Optional invoice note" /></Field>
         </Card>
       </div>
 
@@ -298,82 +296,15 @@ function Modal({ title, children, onClose }) { return <motion.div className="mod
 
 function InvoicesPage({ invoices, onEdit, onDelete }) {
   const [q,setQ]=useState('')
+  const rows = useMemo(() => invoices.filter(i => {
+    const hay = `${i.invoiceNo} ${i.customerName} ${i.phone}`.toLowerCase()
+    return hay.includes(q.toLowerCase())
+  }).sort((a,b)=>String(b.savedAt||'').localeCompare(String(a.savedAt||''))), [invoices,q])
 
-  const rows = useMemo(
-    () => invoices
-      .filter(i => {
-        const hay = `${i.invoiceNo} ${i.customerName} ${i.phone}`.toLowerCase()
-        return hay.includes(q.toLowerCase())
-      })
-      .sort((a,b)=>String(b.savedAt||'').localeCompare(String(a.savedAt||''))),
-    [invoices,q]
-  )
-
-  return <motion.div className="page" initial={{opacity:0,y:12}} animate={{opacity:1,y:0}}>
-    <PageHeader eyebrow="BILLING RECORDS" title="Invoices" text="Search, reopen and manage every saved bill." />
-
-    <Card className="table-card">
-      <div className="toolbar">
-        <div className="search-box simple">
-          <Search size={19}/>
-          <input
-            value={q}
-            onChange={e=>setQ(e.target.value)}
-            placeholder="Search invoice, customer or mobile..."
-          />
-        </div>
-      </div>
-
-      {rows.length
-        ? <div className="responsive-table simple-invoice-table">
-            <div className="rt-head">
-              <span>INVOICE</span>
-              <span>CUSTOMER</span>
-              <span>DATE</span>
-              <span>AMOUNT</span>
-              <span/>
-            </div>
-
-            {rows.map(inv=>
-              <div className="rt-row" key={inv.id}>
-                <div data-label="Invoice">
-                  <strong>{inv.invoiceNo}</strong>
-                  <small>{inv.referenceNo || 'Saved invoice'}</small>
-                </div>
-
-                <div data-label="Customer">
-                  <strong>{inv.customerName}</strong>
-                  <small>{inv.phone || 'No mobile'}</small>
-                </div>
-
-                <div data-label="Date">
-                  <strong>{inv.date}</strong>
-                </div>
-
-                <div className="rt-amount" data-label="Amount">
-                  {money(inv.total)}
-                </div>
-
-                <div className="row-actions">
-                  <button onClick={()=>onEdit(inv)} title="Edit">
-                    <Pencil size={17}/>
-                  </button>
-
-                  <button onClick={()=>downloadInvoicePdf(inv, storage.getSettings())} title="PDF">
-                    <FileDown size={17}/>
-                  </button>
-
-                  <button className="danger" onClick={()=>onDelete(inv.id)} title="Delete">
-                    <Trash2 size={17}/>
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        : <EmptyState title="No matching invoices" text="Saved invoices will appear here."/>
-      }
-    </Card>
-  </motion.div>
+  return <motion.div className="page" initial={{opacity:0,y:12}} animate={{opacity:1,y:0}}><PageHeader eyebrow="BILLING RECORDS" title="Invoices" text="Search, reopen and manage every saved bill." />
+    <Card className="table-card"><div className="toolbar"><div className="search-box simple"><Search size={19}/><input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search invoice, customer or mobile..."/></div></div>
+      {rows.length ? <div className="responsive-table simple-invoice-table"><div className="rt-head"><span>INVOICE</span><span>CUSTOMER</span><span>DATE</span><span>AMOUNT</span><span/></div>{rows.map(inv=><div className="rt-row" key={inv.id}><div data-label="Invoice"><strong>{inv.invoiceNo}</strong><small>Saved invoice</small></div><div data-label="Customer"><strong>{inv.customerName}</strong><small>{inv.phone || 'No mobile'}</small></div><div data-label="Date"><strong>{inv.date}</strong></div><div className="rt-amount" data-label="Amount">{money(inv.total)}</div><div className="row-actions"><button onClick={()=>onEdit(inv)} title="Edit"><Pencil size={17}/></button><button onClick={()=>downloadInvoicePdf(inv, storage.getSettings())} title="PDF"><FileDown size={17}/></button><button className="danger" onClick={()=>onDelete(inv.id)} title="Delete"><Trash2 size={17}/></button></div></div>)}</div> : <EmptyState title="No matching invoices" text="Saved invoices will appear here."/>}
+    </Card></motion.div>
 }
 
 function CustomersPage({ invoices }) {
@@ -400,8 +331,8 @@ function SettingsPage({ settings, setSettings, showToast, onImport }) {
   useEffect(()=>{setDraft(settings);setDirty(false)},[settings])
   const patch=(p)=>{setDraft(d=>({...d,...p}));setDirty(true)}
   const uploadLogo=(file)=>{if(!file)return; if(file.size>2*1024*1024)return showToast('Logo must be under 2 MB','error'); const r=new FileReader();r.onload=()=>patch({logo:r.result});r.readAsDataURL(file)}
-  const save=()=>{storage.saveSettings(draft);setSettings(draft);setDirty(false);showToast('Settings saved successfully')}
-  return <motion.div className="page settings-page" initial={{opacity:0,y:12}} animate={{opacity:1,y:0}}><PageHeader eyebrow="WORKSPACE SETTINGS" title="Brand & Billing Settings" text="Control how your business appears inside the app and on every PDF." action={<button className="primary-btn settings-save-action" disabled={!dirty} onClick={save}><Save size={18}/> Save Changes</button>} />
+  const save=()=>{storage.saveSettings(draft);const next=storage.getSettings();setSettings(next);setDraft(next);setDirty(false);showToast('Settings saved successfully')}
+  return <motion.div className="page settings-page" initial={{opacity:0,y:12}} animate={{opacity:1,y:0}}><PageHeader eyebrow="WORKSPACE SETTINGS" title="Brand & Invoice Settings" text="Control how your business appears inside the app and on every PDF." action={<button className="primary-btn settings-save-action" disabled={!dirty} onClick={save}><Save size={18}/> Save Changes</button>} />
     <div className="settings-layout">
       <div className="settings-main">
         <Card className="form-card"><div className="section-head"><div><span className="eyebrow">BRANDING</span><h2>Business identity</h2></div><span className={`dirty-chip ${dirty?'dirty':''}`}>{dirty?'Unsaved changes':'All changes saved'}</span></div>

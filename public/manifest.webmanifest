@@ -1,11 +1,16 @@
 {
-  "name": "Smart Parts Billing",
+  "name": "Smart Parts Billing \u2014 Final Client Edition",
   "short_name": "Smart Billing",
   "start_url": "/sonu-invoice/",
   "display": "standalone",
   "background_color": "#07111f",
   "theme_color": "#07111f",
   "icons": [
-    {"src":"icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
   ]
 }

@@ -1,7 +1,7 @@
 {
-  "name": "smart-parts-billing-react-v5-clean-pro",
+  "name": "smart-parts-billing-final-client",
   "private": true,
-  "version": "5.0.0",
+  "version": "5.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",

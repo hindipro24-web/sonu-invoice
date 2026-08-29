@@ -1,23 +1,22 @@
-# Smart Parts Billing — V5 Clean Pro
+# Smart Parts Billing — Final Client Edition v5.1
 
-Client-ready React/Vite non-GST billing app focused on stability, readability, and mobile usability.
+Deployment-ready React/Vite non-GST billing app for GitHub Pages.
 
-## V5 changes
-- Removed Three.js/WebGL and continuous 3D rendering
-- Removed fixed bottom mobile navigation
-- Removed fixed/sticky mobile Settings save bar
-- Standard browser vertical scrolling restored
-- Mobile drawer remains the only navigation on small screens
-- Replaced heavy 3D hero with a lightweight premium invoice preview animation
-- Removed backdrop-filter-heavy glass layers
-- Larger, clearer typography and controls
-- Responsive card/table layouts without page-level horizontal drag
-- Existing invoice, parts, customers, settings, PDF and backup features retained
+## Final scope
+- Clean responsive SaaS UI with normal vertical scrolling
+- No Three.js/WebGL, no fixed bottom nav, no payment/due tracking
+- Customer name, mobile, address and invoice date
+- 65-part searchable catalog + custom items
+- Item Size, Quantity, Rate and Amount
+- Discount and Other Charges
+- Invoice save/update/delete, invoice history and customer history
+- Business logo, name, phone, address, PAN, invoice prefix and footer settings
+- Professional A4 PDF with Size, Amount in Words and Authorized Signature
+- PDF preview/download and mobile share/WhatsApp share sheet
+- Local browser persistence + JSON backup/restore
+- GitHub Pages workflow included
 
-## Build
-```bash
-npm install
-npm run build
-```
+## Deploy
+Push the project contents to the `main` branch of `hindipro24-web/sonu-invoice`. The included GitHub Actions workflow runs `npm install`, `npm run build`, and deploys `dist` to Pages.
 
-GitHub Pages workflow is included.
+Live path expected by Vite: `/sonu-invoice/`.
