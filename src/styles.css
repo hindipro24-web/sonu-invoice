@@ -131,3 +131,58 @@
     animation:none !important;
   }
 }
+
+/* ======================================
+   CLEAN 3D HERO — REMOVE MOBILE CLUTTER
+====================================== */
+
+@media (max-width:900px) {
+  .hero-visual .float-chip {
+    display:none !important;
+  }
+
+  .hero-visual {
+    min-height:270px;
+    overflow:hidden;
+  }
+
+  .three-hero {
+    inset:-10px -22px -18px -22px;
+    opacity:.96;
+  }
+}
+
+/* Desktop floating cards — smaller & cleaner */
+@media (min-width:901px) {
+  .float-chip {
+    padding:8px 10px;
+    border-radius:12px;
+    background:rgba(8,20,35,.82);
+    border:1px solid rgba(117,173,232,.18);
+    box-shadow:0 12px 26px rgba(0,0,0,.20);
+  }
+
+  .float-chip span {
+    font-size:8px;
+  }
+
+  .float-chip strong {
+    font-size:11px;
+  }
+
+  .float-chip > svg {
+    width:15px;
+    height:15px;
+  }
+
+  .chip-one {
+    left:6%;
+    top:18%;
+  }
+
+  .chip-two {
+    right:7%;
+    bottom:18%;
+  }
+}
+
