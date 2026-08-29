@@ -3,200 +3,243 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#113f67" />
-  <meta name="description" content="Smart Parts Billing - fast non-GST invoices for fabrication parts." />
-  <title>Smart Parts Billing</title>
+  <meta name="theme-color" content="#0b1f33" />
+  <meta name="description" content="Smart Parts Billing Pro - professional non-GST fabrication billing software." />
+  <title>Smart Parts Billing Pro</title>
   <link rel="manifest" href="manifest.json" />
-  <link rel="icon" href="icons/icon-192.png" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <div class="app-shell">
-    <header class="topbar">
-      <div class="brand" role="button" tabindex="0" data-view="new">
-        <div class="brand-mark">SP</div>
-        <div>
-          <div class="brand-title">Smart Parts Billing</div>
-          <div class="brand-sub">Simple • Fast • Non-GST</div>
+    <aside class="sidebar" id="sidebar">
+      <div class="brand-block">
+        <div class="brand-logo-wrap">
+          <img id="sidebarLogo" alt="Business logo" hidden />
+          <div id="sidebarLogoFallback" class="brand-logo-fallback">SP</div>
+        </div>
+        <div class="brand-copy">
+          <strong id="sidebarBusinessName">Smart Parts Billing</strong>
+          <span>Billing OS • Non-GST</span>
         </div>
       </div>
-      <nav class="topnav" aria-label="Main navigation">
-        <button class="nav-btn active" data-view="new">Bill Banao</button>
-        <button class="nav-btn" data-view="history">Bills</button>
-        <button class="nav-btn" data-view="catalog">Parts</button>
-        <button class="icon-btn" id="settingsBtn" aria-label="Settings" title="Settings">⚙</button>
+
+      <nav class="side-nav" aria-label="Main navigation">
+        <button class="side-link active" data-view="dashboard"><span class="nav-icon">⌂</span><span>Dashboard</span></button>
+        <button class="side-link" data-view="invoice"><span class="nav-icon">＋</span><span>New Invoice</span></button>
+        <button class="side-link" data-view="invoices"><span class="nav-icon">▤</span><span>Invoices</span><span class="nav-count" id="invoiceNavCount">0</span></button>
+        <button class="side-link" data-view="customers"><span class="nav-icon">◎</span><span>Customers</span></button>
+        <button class="side-link" data-view="parts"><span class="nav-icon">◇</span><span>Parts Master</span></button>
+        <button class="side-link" data-view="automation"><span class="nav-icon">⚡</span><span>Automation</span><span class="status-dot"></span></button>
       </nav>
-    </header>
 
-    <main class="page-wrap">
-      <section id="newView" class="view active-view">
-        <div class="welcome-row">
-          <div>
-            <p class="eyebrow">NEW BILL</p>
-            <h1>Bill banao, PDF bhejo.</h1>
-            <p class="muted">Part search karo, quantity set karo aur professional invoice seconds me ready.</p>
-          </div>
-          <div class="invoice-badge">
-            <span>Invoice</span>
-            <strong id="invoiceNoTop">INV-0001</strong>
-          </div>
+      <div class="sidebar-bottom">
+        <button class="side-link" data-view="settings"><span class="nav-icon">⚙</span><span>Settings</span></button>
+        <div class="local-badge"><span class="pulse-dot"></span><div><strong>Local-first</strong><small>Your data stays on device</small></div></div>
+      </div>
+    </aside>
+
+    <main class="main-area">
+      <header class="topbar">
+        <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Open menu">☰</button>
+        <div class="topbar-title">
+          <span id="viewEyebrow">OVERVIEW</span>
+          <strong id="viewTitle">Dashboard</strong>
         </div>
+        <div class="topbar-actions">
+          <button class="ghost-btn top-hide-mobile" id="quickBackupBtn">Export backup</button>
+          <button class="primary-btn compact" id="topNewInvoiceBtn">+ New Invoice</button>
+        </div>
+      </header>
 
-        <div class="workspace-grid">
-          <div class="editor-column">
-            <section class="card customer-card">
-              <div class="card-heading">
-                <div>
-                  <p class="section-kicker">CUSTOMER</p>
-                  <h2>Customer details</h2>
-                </div>
-                <span class="step-chip">01</span>
-              </div>
-              <div class="form-grid three">
-                <label><span>Name</span><input id="customerName" autocomplete="name" placeholder="Customer name" /></label>
-                <label><span>Mobile</span><input id="customerPhone" inputmode="tel" autocomplete="tel" placeholder="Mobile number" /></label>
-                <label><span>Date</span><input id="invoiceDate" type="date" /></label>
-              </div>
-              <label class="full-label"><span>Address / Note <small>(optional)</small></span><input id="customerAddress" placeholder="Area, city or short note" /></label>
-            </section>
-
-            <section class="card parts-card">
-              <div class="card-heading parts-heading">
-                <div>
-                  <p class="section-kicker">ITEMS</p>
-                  <h2>Parts add karo</h2>
-                </div>
-                <span class="step-chip">02</span>
-              </div>
-
-              <div class="part-search-wrap">
-                <span class="search-icon">⌕</span>
-                <input id="partSearch" type="search" autocomplete="off" placeholder="Part no. ya description search karo…" />
-                <button class="small-btn" id="customItemBtn">+ Custom</button>
-                <div id="partResults" class="search-results" hidden></div>
-              </div>
-
-              <div class="items-head" aria-hidden="true">
-                <span>PART</span><span>QTY</span><span>RATE</span><span>AMOUNT</span><span></span>
-              </div>
-              <div id="itemsList" class="items-list"></div>
-              <div id="emptyItems" class="empty-items">
-                <div class="empty-icon">＋</div>
-                <strong>Abhi koi part add nahi hai</strong>
-                <span>Upar search karke part select karo.</span>
-              </div>
-            </section>
-
-            <section class="card adjustments-card">
-              <div class="card-heading compact">
-                <div>
-                  <p class="section-kicker">ADJUSTMENTS</p>
-                  <h2>Extra details</h2>
-                </div>
-              </div>
-              <div class="form-grid three">
-                <label><span>Discount (₹)</span><input id="discount" type="number" inputmode="decimal" min="0" step="0.01" value="0" /></label>
-                <label><span>Other charges (₹)</span><input id="otherCharges" type="number" inputmode="decimal" min="0" step="0.01" value="0" /></label>
-                <label><span>Payment</span><select id="paymentStatus"><option>Unpaid</option><option>Paid</option><option>Part Paid</option></select></label>
-              </div>
-              <label class="full-label"><span>Invoice note <small>(optional)</small></span><textarea id="invoiceNote" rows="2" placeholder="Thank you / payment note / delivery note"></textarea></label>
-            </section>
+      <div class="content-wrap">
+        <!-- DASHBOARD -->
+        <section class="view active-view" id="dashboardView">
+          <div class="hero-strip">
+            <div>
+              <span class="hero-kicker">SMART BILLING WORKSPACE</span>
+              <h1 id="dashboardGreeting">Business control, ek jagah.</h1>
+              <p>Invoices, payments, customers aur follow-ups ko fast manage karo.</p>
+            </div>
+            <button class="hero-action" data-view="invoice"><span>＋</span><div><small>Quick action</small><strong>Create Invoice</strong></div></button>
           </div>
 
-          <aside class="summary-column">
-            <section class="summary-card">
-              <div class="summary-top">
-                <div>
-                  <p class="section-kicker light">BILL SUMMARY</p>
-                  <h2 id="summaryInvoiceNo">INV-0001</h2>
-                </div>
-                <span class="non-gst-chip">NON-GST</span>
-              </div>
-              <div class="summary-lines">
-                <div><span>Items</span><strong id="itemCount">0</strong></div>
-                <div><span>Subtotal</span><strong id="subtotal">₹0.00</strong></div>
-                <div><span>Discount</span><strong id="discountSummary">− ₹0.00</strong></div>
-                <div><span>Other charges</span><strong id="chargesSummary">₹0.00</strong></div>
-              </div>
-              <div class="grand-total">
-                <span>Grand Total</span>
-                <strong id="grandTotal">₹0.00</strong>
-              </div>
-              <div class="action-stack">
-                <button class="primary-btn" id="saveBtn">✓ Save Bill</button>
-                <button class="whatsapp-btn" id="shareBtn">↗ Share PDF</button>
-                <div class="two-actions">
-                  <button class="secondary-btn" id="previewBtn">PDF Preview</button>
-                  <button class="secondary-btn" id="downloadBtn">Download</button>
-                </div>
-                <button class="text-btn" id="newBillBtn">＋ New blank bill</button>
-              </div>
-              <p class="privacy-note">Bills is device par save hote hain. Koi account ya server required nahi.</p>
-            </section>
-          </aside>
-        </div>
-      </section>
-
-      <section id="historyView" class="view">
-        <div class="page-title-row">
-          <div><p class="eyebrow">SAVED BILLS</p><h1>Invoice history</h1><p class="muted">Naam, mobile ya invoice number se search karo.</p></div>
-          <button class="primary-btn compact-btn" id="historyNewBtn">+ New Bill</button>
-        </div>
-        <section class="card">
-          <div class="history-tools">
-            <div class="simple-search"><span>⌕</span><input id="historySearch" placeholder="Search bills…" /></div>
-            <button class="secondary-btn" id="exportBackupBtn">Export backup</button>
+          <div class="metric-grid">
+            <article class="metric-card"><div class="metric-icon">▤</div><div><span>Total Invoices</span><strong id="metricInvoices">0</strong><small id="metricInvoiceHint">No bills yet</small></div></article>
+            <article class="metric-card"><div class="metric-icon">₹</div><div><span>Total Billed</span><strong id="metricRevenue">₹0</strong><small>All saved invoices</small></div></article>
+            <article class="metric-card warning"><div class="metric-icon">◷</div><div><span>Unpaid Amount</span><strong id="metricUnpaid">₹0</strong><small id="metricUnpaidHint">Nothing pending</small></div></article>
+            <article class="metric-card success"><div class="metric-icon">↗</div><div><span>This Month</span><strong id="metricMonth">₹0</strong><small id="metricMonthHint">0 invoices</small></div></article>
           </div>
-          <div id="historyList" class="history-list"></div>
-          <div id="emptyHistory" class="empty-state"><strong>No saved bills yet</strong><span>Bill save karoge to yahan dikhega.</span></div>
+
+          <div class="dashboard-grid">
+            <section class="panel large-panel">
+              <div class="panel-head"><div><span class="panel-kicker">RECENT ACTIVITY</span><h2>Latest invoices</h2></div><button class="link-btn" data-view="invoices">View all →</button></div>
+              <div id="recentInvoices" class="table-list"></div>
+              <div id="recentEmpty" class="empty-state"><div class="empty-round">▤</div><strong>No invoice yet</strong><span>Create your first professional bill.</span><button class="primary-btn compact" data-view="invoice">Create Invoice</button></div>
+            </section>
+
+            <section class="panel automation-preview">
+              <div class="panel-head"><div><span class="panel-kicker">AUTOMATION</span><h2>Follow-up engine</h2></div><span class="live-pill">LIVE</span></div>
+              <div class="automation-score"><div class="score-ring" id="automationScore">3</div><div><strong>Smart rules ready</strong><span>Drafts, due reminders & webhook</span></div></div>
+              <div id="duePreview" class="due-preview"></div>
+              <button class="secondary-btn full" data-view="automation">Open Automation Center</button>
+            </section>
+          </div>
         </section>
-      </section>
 
-      <section id="catalogView" class="view">
-        <div class="page-title-row">
-          <div><p class="eyebrow">PARTS MASTER</p><h1>65 parts ready</h1><p class="muted">Part number, description ya unit se instant search.</p></div>
-          <button class="primary-btn compact-btn" id="catalogNewBtn">+ Make Bill</button>
-        </div>
-        <section class="card">
-          <div class="simple-search catalog-search"><span>⌕</span><input id="catalogSearch" placeholder="Search 65 parts…" /></div>
-          <div id="catalogList" class="catalog-list"></div>
+        <!-- NEW INVOICE -->
+        <section class="view" id="invoiceView">
+          <div class="page-heading">
+            <div><span class="page-kicker">NEW BILL</span><h1>Create professional invoice</h1><p>Part search karo, quantity set karo aur branded PDF share karo.</p></div>
+            <div class="invoice-id-card"><span>Invoice No.</span><strong id="invoiceNoTop">INV-0001</strong></div>
+          </div>
+
+          <div class="invoice-layout">
+            <div class="invoice-main">
+              <section class="panel form-panel">
+                <div class="panel-head"><div><span class="panel-kicker">CUSTOMER & BILL</span><h2>Invoice details</h2></div><span class="step-chip">01</span></div>
+                <div class="form-grid four">
+                  <label><span>Customer Name *</span><input id="customerName" placeholder="Customer name" autocomplete="name" /></label>
+                  <label><span>Mobile</span><input id="customerPhone" placeholder="Mobile number" inputmode="tel" autocomplete="tel" /></label>
+                  <label><span>Invoice Date</span><input id="invoiceDate" type="date" /></label>
+                  <label><span>Due Date</span><input id="dueDate" type="date" /></label>
+                </div>
+                <div class="form-grid two space-top">
+                  <label><span>Address / Site</span><input id="customerAddress" placeholder="Area, city or site name" /></label>
+                  <label><span>Payment Status</span><select id="paymentStatus"><option>Unpaid</option><option>Paid</option><option>Part Paid</option></select></label>
+                </div>
+              </section>
+
+              <section class="panel form-panel items-panel">
+                <div class="panel-head"><div><span class="panel-kicker">ITEMS</span><h2>Add parts</h2></div><span class="step-chip">02</span></div>
+                <div class="search-line">
+                  <div class="smart-search"><span>⌕</span><input id="partSearch" type="search" placeholder="Search part no., description or unit…" autocomplete="off" /><kbd>/</kbd><div id="partResults" class="search-results" hidden></div></div>
+                  <button class="secondary-btn" id="customItemBtn">+ Custom Item</button>
+                </div>
+                <div class="items-table-head"><span>PART DETAILS</span><span>QTY</span><span>RATE</span><span>AMOUNT</span><span></span></div>
+                <div id="itemsList" class="items-list"></div>
+                <div id="emptyItems" class="empty-state compact-empty"><div class="empty-round">＋</div><strong>No item added</strong><span>Search a part above and tap to add.</span></div>
+              </section>
+
+              <section class="panel form-panel">
+                <div class="panel-head"><div><span class="panel-kicker">FINAL DETAILS</span><h2>Adjustments & notes</h2></div><span class="step-chip">03</span></div>
+                <div class="form-grid three">
+                  <label><span>Discount (₹)</span><input id="discount" type="number" min="0" step="0.01" value="0" /></label>
+                  <label><span>Other Charges (₹)</span><input id="otherCharges" type="number" min="0" step="0.01" value="0" /></label>
+                  <label><span>Reference / PO</span><input id="referenceNo" placeholder="Optional" /></label>
+                </div>
+                <label class="block-label space-top"><span>Invoice Note</span><textarea id="invoiceNote" rows="3" placeholder="Delivery note, payment note or thank you message"></textarea></label>
+              </section>
+            </div>
+
+            <aside class="invoice-side">
+              <section class="summary-card panel">
+                <div class="summary-brand"><div class="mini-logo"><img id="summaryLogo" hidden alt="Logo"/><span id="summaryLogoFallback">SP</span></div><div><strong id="summaryBusinessName">Smart Parts Billing</strong><small>NON-GST INVOICE</small></div></div>
+                <div class="summary-invoice"><span>Invoice</span><strong id="summaryInvoiceNo">INV-0001</strong></div>
+                <div class="summary-lines">
+                  <div><span>Items</span><strong id="itemCount">0</strong></div>
+                  <div><span>Subtotal</span><strong id="subtotal">₹0.00</strong></div>
+                  <div><span>Discount</span><strong id="discountSummary">− ₹0.00</strong></div>
+                  <div><span>Other Charges</span><strong id="chargesSummary">₹0.00</strong></div>
+                </div>
+                <div class="grand-total"><span>Grand Total</span><strong id="grandTotal">₹0.00</strong></div>
+                <div class="action-stack">
+                  <button class="primary-btn full" id="saveBtn">✓ Save Invoice</button>
+                  <button class="whatsapp-btn full" id="shareBtn">↗ Share PDF / WhatsApp</button>
+                  <div class="two-actions"><button class="secondary-btn" id="previewBtn">Preview</button><button class="secondary-btn" id="downloadBtn">Download PDF</button></div>
+                  <button class="link-btn center" id="newBillBtn">＋ Start blank invoice</button>
+                </div>
+                <div class="autosave-line"><span class="pulse-dot"></span><span id="autosaveText">Auto-draft enabled</span></div>
+              </section>
+            </aside>
+          </div>
         </section>
-      </section>
+
+        <!-- INVOICES -->
+        <section class="view" id="invoicesView">
+          <div class="page-heading"><div><span class="page-kicker">BILLING RECORDS</span><h1>Invoices</h1><p>Search, reopen, download and track payments.</p></div><button class="primary-btn" data-view="invoice">+ New Invoice</button></div>
+          <section class="panel">
+            <div class="toolbar">
+              <div class="smart-search simple"><span>⌕</span><input id="invoiceSearch" placeholder="Search invoice, customer or mobile…" /></div>
+              <select id="invoiceStatusFilter" class="filter-select"><option value="All">All Status</option><option>Unpaid</option><option>Paid</option><option>Part Paid</option><option>Overdue</option></select>
+            </div>
+            <div class="data-table-wrap"><table class="data-table"><thead><tr><th>INVOICE</th><th>CUSTOMER</th><th>DATE</th><th>STATUS</th><th class="num">AMOUNT</th><th></th></tr></thead><tbody id="invoiceTableBody"></tbody></table></div>
+            <div id="invoiceEmpty" class="empty-state"><div class="empty-round">▤</div><strong>No matching invoices</strong><span>Your saved bills will appear here.</span></div>
+          </section>
+        </section>
+
+        <!-- CUSTOMERS -->
+        <section class="view" id="customersView">
+          <div class="page-heading"><div><span class="page-kicker">CUSTOMER CRM</span><h1>Customers</h1><p>Invoice history se automatic customer list.</p></div><button class="primary-btn" data-view="invoice">+ Create Invoice</button></div>
+          <div class="metric-grid customer-metrics"><article class="metric-card"><div class="metric-icon">◎</div><div><span>Total Customers</span><strong id="customerCount">0</strong><small>Unique customers</small></div></article><article class="metric-card"><div class="metric-icon">↗</div><div><span>Repeat Customers</span><strong id="repeatCustomerCount">0</strong><small>2+ invoices</small></div></article></div>
+          <section class="panel"><div class="toolbar"><div class="smart-search simple"><span>⌕</span><input id="customerSearch" placeholder="Search customer or mobile…" /></div></div><div id="customerGrid" class="customer-grid"></div><div id="customerEmpty" class="empty-state"><div class="empty-round">◎</div><strong>No customers yet</strong><span>Customers are created automatically from saved invoices.</span></div></section>
+        </section>
+
+        <!-- PARTS -->
+        <section class="view" id="partsView">
+          <div class="page-heading"><div><span class="page-kicker">PARTS MASTER</span><h1>Parts & rates</h1><p>65 ready parts + your custom catalog. Rate yahin se update karo.</p></div><button class="primary-btn" id="partsAddCustomBtn">+ Add Part</button></div>
+          <section class="panel"><div class="toolbar"><div class="smart-search simple"><span>⌕</span><input id="catalogSearch" placeholder="Search part number, description or unit…" /></div><span class="soft-chip" id="partsCountChip">65 parts</span></div><div class="data-table-wrap"><table class="data-table"><thead><tr><th>PART NO.</th><th>DESCRIPTION</th><th>UNIT</th><th class="num">RATE</th><th></th></tr></thead><tbody id="partsTableBody"></tbody></table></div></section>
+        </section>
+
+        <!-- AUTOMATION -->
+        <section class="view" id="automationView">
+          <div class="page-heading"><div><span class="page-kicker">AUTOMATION CENTER</span><h1>Smart follow-up engine</h1><p>Manual billing ko faster workflow me convert karo.</p></div><span class="automation-live"><span class="pulse-dot"></span> Automation Ready</span></div>
+          <div class="automation-grid">
+            <section class="panel rules-panel"><div class="panel-head"><div><span class="panel-kicker">RULES</span><h2>Active automations</h2></div></div>
+              <label class="rule-row"><div class="rule-icon">✦</div><div><strong>Auto-save invoice draft</strong><span>Typing ke saath current bill draft save hota rahega.</span></div><input type="checkbox" class="toggle" id="autoDraftToggle" checked /></label>
+              <label class="rule-row"><div class="rule-icon">◷</div><div><strong>Due reminder detection</strong><span>Due soon aur overdue unpaid invoices automatically identify honge.</span></div><input type="checkbox" class="toggle" id="dueReminderToggle" checked /></label>
+              <label class="rule-row"><div class="rule-icon">⚡</div><div><strong>Send saved invoice to webhook</strong><span>n8n / Make / custom workflow ko invoice JSON POST karo.</span></div><input type="checkbox" class="toggle" id="webhookToggle" /></label>
+              <div class="webhook-box"><label><span>Webhook URL</span><input id="webhookUrl" type="url" placeholder="https://your-n8n-domain/webhook/invoice" /></label><button class="secondary-btn" id="testWebhookBtn">Test Webhook</button></div>
+            </section>
+            <section class="panel"><div class="panel-head"><div><span class="panel-kicker">REMINDER QUEUE</span><h2>Payments to follow up</h2></div><span class="soft-chip" id="reminderCountChip">0 pending</span></div><div id="reminderList" class="reminder-list"></div><div id="reminderEmpty" class="empty-state compact-empty"><div class="empty-round">✓</div><strong>All clear</strong><span>No unpaid due reminders right now.</span></div></section>
+          </div>
+          <section class="panel integration-panel"><div><span class="panel-kicker">WORKFLOW</span><h2>How automation works</h2><p>Invoice save → local history → optional webhook → n8n/Make can write Google Sheet, send email, create WhatsApp API task or update your CRM.</p></div><div class="workflow"><span>Invoice</span><i>→</i><span>Webhook</span><i>→</i><span>n8n / Make</span><i>→</i><span>Sheets / CRM</span></div></section>
+        </section>
+
+        <!-- SETTINGS -->
+        <section class="view" id="settingsView">
+          <div class="page-heading"><div><span class="page-kicker">WORKSPACE SETTINGS</span><h1>Brand & billing settings</h1><p>Logo, business details aur PDF branding yahin control karo.</p></div><button class="primary-btn" id="saveSettingsTopBtn">Save Settings</button></div>
+          <div class="settings-grid">
+            <section class="panel settings-panel"><div class="panel-head"><div><span class="panel-kicker">BRANDING</span><h2>Business identity</h2></div></div>
+              <div class="logo-uploader"><div class="logo-preview"><img id="settingsLogoPreview" hidden alt="Logo preview"/><span id="settingsLogoFallback">SP</span></div><div><strong>Business Logo</strong><span>PNG/JPG recommended. PDF aur app header me dikhega.</span><div class="inline-actions"><label class="secondary-btn file-btn">Upload Logo<input id="logoUpload" type="file" accept="image/png,image/jpeg,image/webp" hidden /></label><button class="link-btn danger-link" id="removeLogoBtn">Remove</button></div></div></div>
+              <div class="form-grid two space-top"><label><span>Business Name</span><input id="businessName" placeholder="SONU FABRICATION" /></label><label><span>Mobile / Contact</span><input id="businessPhone" placeholder="Phone number" inputmode="tel" /></label></div>
+              <label class="block-label space-top"><span>Business Address</span><textarea id="businessAddress" rows="3" placeholder="Full business address"></textarea></label>
+            </section>
+            <section class="panel settings-panel"><div class="panel-head"><div><span class="panel-kicker">INVOICE</span><h2>Invoice preferences</h2></div></div>
+              <div class="form-grid two"><label><span>Invoice Prefix</span><input id="invoicePrefix" maxlength="10" placeholder="INV" /></label><label><span>Default Due Days</span><input id="defaultDueDays" type="number" min="0" max="90" value="7" /></label></div>
+              <label class="block-label space-top"><span>Footer Note</span><input id="footerNote" placeholder="Thank you for your business" /></label>
+              <label class="block-label space-top"><span>Payment Details</span><textarea id="paymentDetails" rows="3" placeholder="UPI ID / bank / cash note"></textarea></label>
+              <label class="block-label space-top"><span>WhatsApp Reminder Template</span><textarea id="reminderTemplate" rows="4" placeholder="Hi {name}, invoice {invoice} amount {amount} is pending..."></textarea></label>
+            </section>
+            <section class="panel settings-panel full-span"><div class="panel-head"><div><span class="panel-kicker">DATA</span><h2>Backup & restore</h2></div></div><div class="data-actions"><button class="secondary-btn" id="exportBackupBtn">Export JSON Backup</button><label class="secondary-btn file-btn">Import Backup<input id="importBackupInput" type="file" accept="application/json" hidden /></label><button class="danger-btn" id="clearDataBtn">Clear All Local Data</button></div><p class="settings-note">Data is saved in this browser/device. Regular backup recommended before clearing browser data.</p></section>
+          </div>
+        </section>
+      </div>
     </main>
   </div>
 
-  <div id="settingsModal" class="modal" hidden>
-    <div class="modal-backdrop" data-close-modal></div>
-    <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
-      <div class="modal-head"><div><p class="section-kicker">SETTINGS</p><h2 id="settingsTitle">Business details</h2></div><button class="icon-btn" data-close-modal>✕</button></div>
-      <div class="modal-body">
-        <label><span>Business name</span><input id="businessName" placeholder="e.g. SONU FABRICATION" /></label>
-        <label><span>Mobile / Contact</span><input id="businessPhone" inputmode="tel" placeholder="Phone number" /></label>
-        <label><span>Address</span><textarea id="businessAddress" rows="3" placeholder="Business address"></textarea></label>
-        <div class="form-grid two">
-          <label><span>Invoice prefix</span><input id="invoicePrefix" maxlength="8" placeholder="INV" /></label>
-          <label><span>Footer note</span><input id="footerNote" placeholder="Thank you for your business" /></label>
-        </div>
-        <label><span>Payment details <small>(optional)</small></span><textarea id="paymentDetails" rows="2" placeholder="UPI / bank / cash note"></textarea></label>
-      </div>
-      <div class="modal-actions"><button class="secondary-btn" data-close-modal>Cancel</button><button class="primary-btn" id="saveSettingsBtn">Save Settings</button></div>
-    </section>
-  </div>
+  <nav class="mobile-bottom-nav">
+    <button class="mobile-nav active" data-view="dashboard"><span>⌂</span><small>Home</small></button>
+    <button class="mobile-nav" data-view="invoice"><span>＋</span><small>New</small></button>
+    <button class="mobile-nav" data-view="invoices"><span>▤</span><small>Bills</small></button>
+    <button class="mobile-nav" data-view="automation"><span>⚡</span><small>Automation</small></button>
+    <button class="mobile-nav" data-view="settings"><span>⚙</span><small>Settings</small></button>
+  </nav>
 
-  <div id="customModal" class="modal" hidden>
+  <!-- Custom item modal -->
+  <div class="modal" id="customModal" hidden>
     <div class="modal-backdrop" data-close-custom></div>
-    <section class="modal-card small-modal" role="dialog" aria-modal="true">
-      <div class="modal-head"><div><p class="section-kicker">CUSTOM ITEM</p><h2>Add custom part</h2></div><button class="icon-btn" data-close-custom>✕</button></div>
-      <div class="modal-body">
-        <label><span>Part no. / Code</span><input id="customPartNo" placeholder="Optional code" /></label>
-        <label><span>Description</span><input id="customDescription" placeholder="Item description" /></label>
-        <div class="form-grid two"><label><span>Qty</span><input id="customQty" type="number" min="0.01" step="0.01" value="1" /></label><label><span>Rate (₹)</span><input id="customRate" type="number" min="0" step="0.01" value="0" /></label></div>
-      </div>
-      <div class="modal-actions"><button class="secondary-btn" data-close-custom>Cancel</button><button class="primary-btn" id="addCustomBtn">Add Item</button></div>
-    </section>
+    <section class="modal-card"><div class="modal-head"><div><span class="panel-kicker">CUSTOM ITEM</span><h2>Add custom part</h2></div><button class="icon-btn" data-close-custom>✕</button></div><div class="modal-body"><label><span>Part No. / Code</span><input id="customPartNo" placeholder="e.g. CUSTOM-01" /></label><label><span>Description</span><input id="customDescription" placeholder="Part description" /></label><div class="form-grid two"><label><span>Unit</span><input id="customUnit" placeholder="PCS / G-1" /></label><label><span>Rate (₹)</span><input id="customRate" type="number" min="0" step="0.01" value="0" /></label></div><label class="checkbox-line"><input id="saveCustomToMaster" type="checkbox" checked /> Save this item in Parts Master</label></div><div class="modal-actions"><button class="secondary-btn" data-close-custom>Cancel</button><button class="primary-btn" id="addCustomItemBtn">Add Item</button></div></section>
   </div>
 
-  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <!-- PDF preview -->
+  <div class="modal preview-modal" id="pdfPreviewModal" hidden>
+    <div class="modal-backdrop" data-close-preview></div>
+    <section class="modal-card pdf-modal-card"><div class="modal-head"><div><span class="panel-kicker">PDF PREVIEW</span><h2 id="previewTitle">Invoice Preview</h2></div><button class="icon-btn" data-close-preview>✕</button></div><iframe id="pdfPreviewFrame" title="Invoice PDF Preview"></iframe><div class="modal-actions"><button class="secondary-btn" data-close-preview>Close</button><button class="primary-btn" id="previewDownloadBtn">Download PDF</button></div></section>
+  </div>
+
+  <div id="toast" class="toast" aria-live="polite"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
   <script src="data.js"></script>
   <script src="app.js"></script>
 </body>

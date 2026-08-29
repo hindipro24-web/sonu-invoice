@@ -1,22 +1,42 @@
-# Smart Parts Billing — Classic
+# Smart Parts Billing Pro
 
-Static, deployment-ready non-GST invoice app.
+Professional local-first, non-GST fabrication billing software.
 
-## Deploy to GitHub Pages
-Upload all files to the root of a GitHub repository and enable **Settings → Pages → Deploy from a branch → main / root**.
+## Included
+- SaaS-style responsive dashboard
+- Business logo upload (logo appears in app and PDF)
+- 65-part searchable master catalog
+- Custom parts + editable master rates
+- Quantity +/- controls and editable rate per invoice
+- Customer CRM generated from invoice history
+- Invoice history, search, payment status and due dates
+- Professional A4 PDF with fixed RATE / AMOUNT alignment
+- PDF preview, download and Android Web Share (WhatsApp/share sheet)
+- Automation Center
+  - Auto-save invoice draft
+  - Due / overdue reminder detection
+  - One-tap WhatsApp payment reminder
+  - Optional n8n / Make / custom webhook on invoice save
+- JSON backup / restore
+- PWA manifest + service worker
+- No backend required for core billing
 
-## Features
-- 65 searchable fabrication parts
-- Quantity +/- controls and editable rate
-- Custom items
-- Customer details, discounts and other charges
-- Saved invoice history and search (localStorage)
-- Professional client-side PDF generation with fixed Rate/Amount alignment
-- Android Web Share API for sharing the generated PDF to WhatsApp/other apps
-- PDF preview + download
-- Business settings
-- PWA/offline service worker
-- No backend, login or API key required
+## Deploy on GitHub Pages
+Upload all files in this folder to the repository root and enable Pages from `main` branch `/ (root)`.
 
-## Data note
-Bills and settings are stored in the current browser/device. Use **Bills → Export backup** periodically.
+## Automation webhook payload
+On invoice save, when webhook automation is enabled, the app sends:
+
+```json
+{
+  "event": "invoice.saved",
+  "invoice": { "...": "full invoice object" },
+  "source": "Smart Parts Billing Pro",
+  "sentAt": "ISO timestamp"
+}
+```
+
+Use the webhook with n8n / Make to write Google Sheets, email staff, update CRM or connect an approved WhatsApp API provider.
+
+## Important
+Browser data uses localStorage. Export backup periodically. Direct PDF file sharing depends on Android/browser Web Share support and HTTPS (GitHub Pages supports HTTPS).
