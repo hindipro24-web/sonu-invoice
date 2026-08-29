@@ -1,20 +1,17 @@
-# Smart Parts Billing — Client Edition V2
+# Smart Parts Billing — Professional Client Suite V3
 
-Professional non-GST billing software designed for real client use on phone, tablet and desktop.
+Client-ready non-GST billing software with a professional B2B SaaS interface.
 
-## Core workflow
-- Dashboard
-- New invoice with searchable parts master
-- Quantity +/- and editable rates
-- Customers generated from invoice history
-- Parts master with editable rates and custom parts
-- Paid / Unpaid / Part Paid tracking
-- A4 PDF preview, download and Android share sheet
-- Business logo and branding
-- Explicit Save changes in Settings (desktop + mobile sticky save bar)
-- Invoice draft auto-save and restore after reload
-- JSON backup / restore
-- Installable PWA
+## Key improvements
+- Larger, readable typography and 46–50px touch controls
+- Executive navy/white SaaS visual system
+- Professional dashboard hierarchy
+- Cleaner invoice form and sticky invoice summary
+- Clear Save Settings workflow with saved/unsaved state
+- Logo branding in app and PDF
+- Responsive mobile/tablet/desktop layouts with no page-level horizontal overflow
+- Network-first service worker strategy so new deployments are less likely to show stale cached UI
+- Existing working invoice, parts, customer, PDF, backup and local persistence features retained
 
-## Data model
-This build stores records in the current browser/device using localStorage. It is fully usable for a single-device client workflow. Multi-device login, cloud sync and staff accounts require a backend/database and are intentionally not included in this static GitHub Pages build.
+## Hosting
+Upload all files directly to the GitHub Pages repository root.

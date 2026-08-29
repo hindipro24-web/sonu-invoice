@@ -1,33 +1,26 @@
-# Smart Parts Billing — Client Edition V2 QA
+# Smart Parts Billing — Professional Client Suite V3 QA
 
-## Functional/code checks
-- JavaScript syntax: PASS
-- Every DOM ID referenced by app.js exists in index.html: PASS
+## Code checks completed
+- JavaScript syntax: PASS (`node --check app.js`)
+- HTML parser check: PASS
 - Duplicate HTML IDs: none
-- Manifest JSON: valid
-- Required deployment files: present
-- Automation/webhook/n8n UI/code: removed
-- Explicit Settings Save buttons: desktop top action + persistent bottom action
-- Settings dirty/saved state: implemented
-- Logo upload/remove: persists to browser storage and updates app/PDF branding
-- Invoice save/update/delete: persists in localStorage
-- Draft auto-save + restore after reload: enabled
-- Parts rate edits/custom parts: persist in localStorage
-- Invoice search/status filtering: enabled
-- Customers derived from saved invoices: enabled
-- JSON backup/import: enabled
-- PDF preview/download/share path: enabled through jsPDF
-- Fixed PDF numeric columns for QTY / RATE / AMOUNT: retained
+- Required local asset references: PASS (`manifest.json`, `styles.css`, `data.js`, `app.js`)
+- CSS brace balance: PASS
+- Settings Save buttons remain wired to the real `saveSettings()` persistence flow
+- Logo upload/remove remains wired to local persistence
+- Existing invoice save/update/delete, draft, parts, customers, PDF, backup/import logic retained
 
-## Responsive/UI rules
-- Minimum primary form/button sizing: 40–44px
-- Normal UI text: 12–15px; major headings 25–36px
-- Desktop: fixed navigation + sticky invoice summary
-- Tablet: dashboard/invoice layouts collapse safely
-- Mobile: drawer navigation + bottom navigation
-- Mobile tables convert to cards; no page-level wide table requirement
-- Mobile Settings Save action remains visible above bottom navigation
-- 350px fallback reduces multi-column metrics to one column
+## V3 UI improvements
+- Base typography raised to 16px with larger headings and readable labels
+- Form inputs/selects increased to 48–50px touch height
+- Primary/secondary buttons normalized to 46px+ height
+- Reworked executive navy/white B2B SaaS visual system
+- Dashboard hero simplified into an operational control-center layout
+- Stronger visual hierarchy for totals, cards, tables and invoice summary
+- Settings includes top Save + sticky bottom Save bar with saved/unsaved state
+- Mobile bottom navigation retained and enlarged
+- Responsive overrides included for 1200 / 980 / 760 / 430 / 360px breakpoints
+- Service worker updated to V3 and changed to network-first for HTML/CSS/JS to reduce stale deployments
 
-## Important deployment note
-This static GitHub Pages edition stores business data in the current browser/device. It is suitable for one-device/one-browser client use. Multi-device sync, logins and staff access need a real backend/database.
+## Deployment note
+Upload the ZIP contents directly into the GitHub Pages repository root. This ZIP is intentionally flat at the root to avoid nested-folder deployment mistakes.

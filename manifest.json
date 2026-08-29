@@ -1,11 +1,11 @@
 {
-  "name": "Smart Parts Billing",
+  "name": "Smart Parts Billing — Professional Client Suite",
   "short_name": "Smart Billing",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#070b14",
-  "theme_color": "#070b14",
-  "description": "Futuristic professional non-GST parts billing software",
+  "background_color": "#f5f7fb",
+  "theme_color": "#0b1424",
+  "description": "Professional non-GST parts billing software for client-ready business use",
   "icons": [
     {"src":"icons/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
   ]

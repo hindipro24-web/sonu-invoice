@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#0b1f33" />
   <meta name="description" content="Smart Parts Billing - professional non-GST business billing software for mobile, tablet and desktop." />
-  <title>Smart Parts Billing — Client Edition</title>
+  <title>Smart Parts Billing — Professional Client Suite</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="stylesheet" href="styles.css" />
 </head>
@@ -19,7 +19,7 @@
         </div>
         <div class="brand-copy">
           <strong id="sidebarBusinessName">Smart Parts Billing</strong>
-          <span>Invoice Suite • Non-GST</span>
+          <span>Professional Billing Suite</span>
         </div>
       </div>
 
@@ -44,6 +44,7 @@
           <span id="viewEyebrow">OVERVIEW</span>
           <strong id="viewTitle">Dashboard</strong>
         </div>
+        <div class="workspace-status top-hide-mobile"><span class="workspace-status-dot"></span><div><strong>Workspace ready</strong><small>Local & private</small></div></div>
         <div class="topbar-actions">
           <button class="ghost-btn top-hide-mobile" id="quickBackupBtn">Export backup</button>
           <button class="primary-btn compact" id="topNewInvoiceBtn">+ New Invoice</button>
@@ -55,11 +56,11 @@
         <section class="view active-view" id="dashboardView">
           <div class="hero-strip">
             <div>
-              <span class="hero-kicker">BUSINESS BILLING</span>
-              <h1 id="dashboardGreeting">Your billing workspace</h1>
-              <p>Create invoices, manage customers, update part rates and share professional PDFs from one place.</p>
+              <span class="hero-kicker">BILLING CONTROL CENTER</span>
+              <h1 id="dashboardGreeting">Professional billing, without the clutter.</h1>
+              <p>Create branded invoices, manage customer history and keep your parts & rates organized in one reliable workspace.</p>
             </div>
-            <button class="hero-action" data-view="invoice"><span>＋</span><div><small>Quick action</small><strong>Create Invoice</strong></div></button>
+            <button class="hero-action" data-view="invoice"><span>＋</span><div><small>Primary action</small><strong>Create new invoice</strong></div></button>
           </div>
 
           <div class="metric-grid">
@@ -91,7 +92,7 @@
         <!-- NEW INVOICE -->
         <section class="view" id="invoiceView">
           <div class="page-heading">
-            <div><span class="page-kicker">NEW BILL</span><h1>Create professional invoice</h1><p>Part search karo, quantity set karo aur branded PDF share karo.</p></div>
+            <div><span class="page-kicker">NEW INVOICE</span><h1>Create invoice</h1><p>Add customer details, select parts and generate a clean branded PDF.</p></div>
             <div class="invoice-id-card"><span>Invoice No.</span><strong id="invoiceNoTop">INV-0001</strong></div>
           </div>
 
@@ -171,20 +172,20 @@
 
         <!-- CUSTOMERS -->
         <section class="view" id="customersView">
-          <div class="page-heading"><div><span class="page-kicker">CUSTOMER CRM</span><h1>Customers</h1><p>Invoice history se automatic customer list.</p></div><button class="primary-btn" data-view="invoice">+ Create Invoice</button></div>
+          <div class="page-heading"><div><span class="page-kicker">CUSTOMER DIRECTORY</span><h1>Customers</h1><p>Customer records are created automatically from saved invoices.</p></div><button class="primary-btn" data-view="invoice">+ Create Invoice</button></div>
           <div class="metric-grid customer-metrics"><article class="metric-card"><div class="metric-icon">◎</div><div><span>Total Customers</span><strong id="customerCount">0</strong><small>Unique customers</small></div></article><article class="metric-card"><div class="metric-icon">↗</div><div><span>Repeat Customers</span><strong id="repeatCustomerCount">0</strong><small>2+ invoices</small></div></article></div>
           <section class="panel"><div class="toolbar"><div class="smart-search simple"><span>⌕</span><input id="customerSearch" placeholder="Search customer or mobile…" /></div></div><div id="customerGrid" class="customer-grid"></div><div id="customerEmpty" class="empty-state"><div class="empty-round">◎</div><strong>No customers yet</strong><span>Customers are created automatically from saved invoices.</span></div></section>
         </section>
 
         <!-- PARTS -->
         <section class="view" id="partsView">
-          <div class="page-heading"><div><span class="page-kicker">PARTS MASTER</span><h1>Parts & rates</h1><p>65 ready parts + your custom catalog. Rate yahin se update karo.</p></div><button class="primary-btn" id="partsAddCustomBtn">+ Add Part</button></div>
+          <div class="page-heading"><div><span class="page-kicker">PARTS MASTER</span><h1>Parts & rates</h1><p>Manage your ready catalog, custom parts and selling rates from one place.</p></div><button class="primary-btn" id="partsAddCustomBtn">+ Add Part</button></div>
           <section class="panel"><div class="toolbar"><div class="smart-search simple"><span>⌕</span><input id="catalogSearch" placeholder="Search part number, description or unit…" /></div><span class="soft-chip" id="partsCountChip">65 parts</span></div><div class="data-table-wrap"><table class="data-table"><thead><tr><th>PART NO.</th><th>DESCRIPTION</th><th>UNIT</th><th class="num">RATE</th><th></th></tr></thead><tbody id="partsTableBody"></tbody></table></div></section>
         </section>
 
         <!-- SETTINGS -->
         <section class="view" id="settingsView">
-          <div class="page-heading"><div><span class="page-kicker">WORKSPACE SETTINGS</span><h1>Brand & billing settings</h1><p>Business details, logo and invoice preferences. Changes are saved only when you press Save.</p></div><button class="primary-btn" id="saveSettingsTopBtn">Save changes</button></div>
+          <div class="page-heading"><div><span class="page-kicker">WORKSPACE SETTINGS</span><h1>Business & invoice settings</h1><p>Control your business identity, PDF branding and billing preferences. Press Save to apply changes.</p></div><button class="primary-btn" id="saveSettingsTopBtn">Save changes</button></div>
           <div class="settings-grid">
             <section class="panel settings-panel"><div class="panel-head"><div><span class="panel-kicker">BRANDING</span><h2>Business identity</h2></div></div>
               <div class="logo-uploader"><div class="logo-preview"><img id="settingsLogoPreview" hidden alt="Logo preview"/><span id="settingsLogoFallback">SP</span></div><div><strong>Business Logo</strong><span>PNG/JPG recommended. Logo app header and PDF invoice me dikhega.</span><div class="inline-actions"><label class="secondary-btn file-btn">Upload Logo<input id="logoUpload" type="file" accept="image/png,image/jpeg,image/webp" hidden /></label><button class="link-btn danger-link" id="removeLogoBtn">Remove</button></div></div></div>
@@ -199,7 +200,7 @@
             <section class="panel settings-panel full-span"><div class="panel-head"><div><span class="panel-kicker">DATA</span><h2>Backup & restore</h2></div></div><div class="data-actions"><button class="secondary-btn" id="exportBackupBtn">Export JSON Backup</button><label class="secondary-btn file-btn">Import Backup<input id="importBackupInput" type="file" accept="application/json" hidden /></label><button class="danger-btn" id="clearDataBtn">Clear All Local Data</button></div><p class="settings-note">Data is saved in this browser/device. Export a backup regularly if this software is being used for business records.</p></section>
           </div>
           <div class="settings-save-bar" id="settingsSaveBar">
-            <div class="settings-save-copy"><strong>Save workspace settings</strong><span id="settingsSaveState">All changes saved</span></div>
+            <div class="settings-save-copy"><strong>Workspace settings</strong><span id="settingsSaveState">All changes saved</span></div>
             <button class="primary-btn" id="saveSettingsBottomBtn">Save changes</button>
           </div>
         </section>
