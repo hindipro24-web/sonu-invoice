@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="description" content="Professional non-GST invoice generator for fabrication businesses." />
+  <title>Invoice Pro — Non-GST Billing</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <div class="brand-mark">SF</div>
+        <div>
+          <strong id="sidebarBusinessName">Invoice Pro</strong>
+          <span>Non-GST Billing</span>
+        </div>
+      </div>
+
+      <nav class="nav-list">
+        <button class="nav-item active" data-view="invoiceView"><span>▣</span> New Invoice</button>
+        <button class="nav-item" data-view="historyView"><span>◷</span> Invoice History</button>
+        <button class="nav-item" data-view="catalogView"><span>⌕</span> Parts Catalog</button>
+        <button class="nav-item" data-view="settingsView"><span>⚙</span> Settings</button>
+      </nav>
+
+      <div class="sidebar-note">
+        <b>Deployment Ready</b>
+        <span>Works on mobile, desktop & GitHub Pages.</span>
+      </div>
+    </aside>
+
+    <main class="main-panel">
+      <header class="topbar">
+        <button class="icon-btn menu-btn" id="menuBtn" aria-label="Open menu">☰</button>
+        <div class="topbar-title">
+          <h1 id="pageTitle">Create Invoice</h1>
+          <p id="pageSubtitle">Professional non-GST invoice builder</p>
+        </div>
+        <div class="topbar-actions">
+          <button class="btn btn-ghost" id="newInvoiceBtn">+ New</button>
+          <button class="btn btn-primary" id="saveInvoiceBtn">Save Invoice</button>
+        </div>
+      </header>
+
+      <section class="view active" id="invoiceView">
+        <div class="invoice-grid">
+          <div class="card editor-card">
+            <div class="section-heading">
+              <div>
+                <span class="eyebrow">INVOICE DETAILS</span>
+                <h2>Customer & Bill</h2>
+              </div>
+              <span class="status-pill">NON-GST</span>
+            </div>
+
+            <div class="form-grid four">
+              <label>Invoice No.
+                <input id="invoiceNo" autocomplete="off" />
+              </label>
+              <label>Date
+                <input type="date" id="invoiceDate" />
+              </label>
+              <label>Customer Name
+                <input id="customerName" placeholder="Customer / company name" autocomplete="off" />
+              </label>
+              <label>Mobile
+                <input id="customerMobile" inputmode="tel" placeholder="10-digit mobile" autocomplete="off" />
+              </label>
+            </div>
+
+            <label class="full-label">Customer Address
+              <textarea id="customerAddress" rows="2" placeholder="Address (optional)"></textarea>
+            </label>
+          </div>
+
+          <div class="card editor-card items-card">
+            <div class="section-heading items-heading">
+              <div>
+                <span class="eyebrow">ITEMS</span>
+                <h2>Invoice Items</h2>
+              </div>
+              <button class="btn btn-outline" id="addItemBtn">+ Add Item</button>
+            </div>
+
+            <div class="quick-search-wrap">
+              <div class="search-box">
+                <span>⌕</span>
+                <input id="partSearch" placeholder="Search by part no. or description..." autocomplete="off" />
+                <kbd>/</kbd>
+              </div>
+              <div class="search-results hidden" id="searchResults"></div>
+            </div>
+
+            <div class="items-table-wrap">
+              <table class="items-table">
+                <thead>
+                  <tr>
+                    <th class="col-index">#</th>
+                    <th>Part / Description</th>
+                    <th class="col-qty">Qty</th>
+                    <th class="col-rate num">Rate</th>
+                    <th class="col-amount num">Amount</th>
+                    <th class="col-action"></th>
+                  </tr>
+                </thead>
+                <tbody id="itemsBody"></tbody>
+              </table>
+            </div>
+
+            <div class="empty-items" id="emptyItems">
+              <div class="empty-icon">▤</div>
+              <b>No items added</b>
+              <span>Search a part above or add a custom item.</span>
+            </div>
+          </div>
+
+          <div class="bottom-grid">
+            <div class="card editor-card notes-card">
+              <span class="eyebrow">NOTES</span>
+              <textarea id="invoiceNotes" rows="5" placeholder="Payment terms, delivery note, thank you message...">Thank you for your business.</textarea>
+            </div>
+
+            <div class="card totals-card">
+              <div class="total-row"><span>Subtotal</span><b id="subtotalText">₹0.00</b></div>
+              <div class="total-row editable-total">
+                <span>Discount</span>
+                <div><span>₹</span><input type="number" min="0" step="0.01" id="discountInput" value="0" /></div>
+              </div>
+              <div class="total-row editable-total">
+                <span>Other Charges</span>
+                <div><span>₹</span><input type="number" min="0" step="0.01" id="otherChargesInput" value="0" /></div>
+              </div>
+              <div class="grand-total"><span>Grand Total</span><b id="grandTotalText">₹0.00</b></div>
+              <div class="action-grid">
+                <button class="btn btn-dark" id="previewPdfBtn">Preview PDF</button>
+                <button class="btn btn-primary" id="downloadPdfBtn">Download PDF</button>
+                <button class="btn btn-whatsapp" id="sharePdfBtn">Share PDF</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" id="historyView">
+        <div class="card page-card">
+          <div class="section-heading">
+            <div><span class="eyebrow">LOCAL RECORDS</span><h2>Invoice History</h2></div>
+            <button class="btn btn-outline" id="exportDataBtn">Export Backup</button>
+          </div>
+          <div class="search-box standalone"><span>⌕</span><input id="historySearch" placeholder="Search invoice no., customer or mobile..." /></div>
+          <div class="history-list" id="historyList"></div>
+        </div>
+      </section>
+
+      <section class="view" id="catalogView">
+        <div class="card page-card">
+          <div class="section-heading">
+            <div><span class="eyebrow">65 PARTS LOADED</span><h2>SONU FABRICATION Catalog</h2></div>
+          </div>
+          <div class="search-box standalone"><span>⌕</span><input id="catalogSearch" placeholder="Search catalog..." /></div>
+          <div class="catalog-grid" id="catalogGrid"></div>
+        </div>
+      </section>
+
+      <section class="view" id="settingsView">
+        <div class="card page-card settings-card">
+          <div class="section-heading">
+            <div><span class="eyebrow">BUSINESS PROFILE</span><h2>Invoice Settings</h2></div>
+          </div>
+          <div class="form-grid two">
+            <label>Business Name<input id="businessName" placeholder="SONU FABRICATION" /></label>
+            <label>Phone<input id="businessPhone" inputmode="tel" placeholder="Business phone" /></label>
+            <label>Address<textarea id="businessAddress" rows="3" placeholder="Business address"></textarea></label>
+            <label>Payment / Bank Details<textarea id="paymentDetails" rows="3" placeholder="UPI / Bank / payment note"></textarea></label>
+            <label>Invoice Prefix<input id="invoicePrefix" placeholder="INV" maxlength="8" /></label>
+            <label>Footer Note<input id="footerNote" placeholder="Computer generated invoice" /></label>
+          </div>
+          <div class="settings-actions">
+            <button class="btn btn-primary" id="saveSettingsBtn">Save Settings</button>
+            <button class="btn btn-ghost danger" id="resetAppBtn">Reset App Data</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="itemDialog" class="modal">
+    <form method="dialog" class="modal-card" id="customItemForm">
+      <div class="modal-head"><div><span class="eyebrow">CUSTOM ITEM</span><h3>Add Invoice Item</h3></div><button class="icon-btn" value="cancel">×</button></div>
+      <label>Part No. / Code<input id="customPartNo" /></label>
+      <label>Description<input id="customDescription" required /></label>
+      <div class="form-grid two">
+        <label>Quantity<input id="customQty" type="number" min="0.01" step="0.01" value="1" /></label>
+        <label>Rate<input id="customRate" type="number" min="0" step="0.01" value="0" /></label>
+      </div>
+      <div class="modal-actions"><button class="btn btn-ghost" value="cancel">Cancel</button><button class="btn btn-primary" id="confirmCustomItemBtn" value="default">Add Item</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="pdfDialog" class="modal pdf-modal">
+    <div class="modal-card pdf-modal-card">
+      <div class="modal-head"><div><span class="eyebrow">PDF PREVIEW</span><h3>Invoice Preview</h3></div><button class="icon-btn" id="closePdfDialog">×</button></div>
+      <iframe id="pdfFrame" title="PDF Preview"></iframe>
+    </div>
+  </dialog>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
