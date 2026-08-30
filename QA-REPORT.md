@@ -1,36 +1,38 @@
-# QA Report — Smart Parts Billing Final Client Edition v5.1
+# QA Report — Smart Parts Billing Client Final v5.2
 
 ## Result
-58/58 source-level production checks passed.
+Production build and targeted V5.2 checks passed on 2026-08-30.
 
-## Fixed before final packaging
-- Removed Due Date, Payment Status, Paid/Unpaid/Part Paid and Pending Amount flows.
-- Removed Payment Details and Reference / PO fields.
-- Added item Size on desktop/mobile and in PDF.
-- Added optional PAN in Settings and PDF.
-- Added automatic Amount in Words.
-- Added clean Authorized Signature area.
-- Removed Three.js/WebGL and fixed bottom navigation from the clean build.
-- Restored normal vertical browser scrolling.
-- Added responsive invoice layout guard for laptop/tablet widths to prevent item table overlap.
-- Moved mobile navigation to the drawer only.
-- Fixed invoice-number reuse after deleting an older invoice (next number uses highest existing suffix).
-- Fixed Settings save normalization so saved values immediately match persisted values.
-- Fixed legacy data migration: old due/payment/reference fields are stripped when loading/importing.
-- Recalculates invoice subtotal/total when loading older data.
-- Prevented a saved invoice from being accidentally restored as an autosaved draft.
-- PDF supports long customer addresses and multi-page item tables without totals/signature overlap.
+## V5.2 verified changes
+- Parts Master supports add, edit and delete with Part No., Description, Size, Unit and Rate.
+- Invoice and Parts Master searches support multiple words, size values and part numbers.
+- Enter adds the top matching catalog part from the invoice search.
+- Invoice save, PDF preview, PDF download and sharing use the same validation rules.
+- Rate, discount and other charges cannot become negative through the UI.
+- Settings require a business name and invoice prefix.
+- Backup import validates structure and file size and confirms before replacing local data.
+- Unsupported file sharing downloads the PDF and tells the user to attach it in WhatsApp.
 
-## Checks passed
-- Required project/deployment files present.
-- package.json and manifest JSON valid.
-- Node syntax checks passed for pdf.js, storage.js, parts.js and vite.config.js.
-- CSS parser reported no syntax errors.
-- App.jsx delimiter balance passed.
-- 65 catalog parts detected.
-- No user-facing due/payment/challan/PO fields remain.
-- GitHub Pages base is `/sonu-invoice/`.
-- GitHub Actions install/build/dist deployment steps are present.
+## PDF verification
+- Generated and rendered an A4 stress-test invoice with 34 long-description items.
+- Long business name, business address, customer name and customer address wrap without clipping.
+- Part No., Description, Size, Qty, Rate and Amount columns remain aligned.
+- Multi-page rows stay intact instead of splitting across pages.
+- Subtotal, Discount, Other Charges and Grand Total remain in one aligned summary card.
+- Amount in Words, note, signature, footer and page numbering render without overlap.
+- Final test PDF: 3 A4 pages, readable text extraction and zero render errors.
 
-## Runtime verification
-This package is source-deployment ready. The final runtime build is performed by the included GitHub Actions workflow after pushing to `main` because this packaging environment has no npm registry network access.
+## Build verification
+- `npm install --package-lock-only` completed successfully.
+- `npm run build` completed successfully with Vite.
+- Production bundles are split by React, PDF and icon dependencies; no oversized-chunk warning remains.
+- `pdf.js` and `storage.js` pass Node syntax checks.
+- Package and manifest JSON are valid.
+- 65 default catalog parts remain present.
+- GitHub Pages base remains `/sonu-invoice/`.
+- GitHub Actions deployment workflow remains configured for `main`.
+
+## Architecture retained
+- React 18 + Vite application.
+- Local browser persistence with JSON backup/restore.
+- No login, cloud sync or multi-device database in this release.

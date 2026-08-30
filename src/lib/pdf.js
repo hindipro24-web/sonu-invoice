@@ -1,7 +1,10 @@
-import jsPDF from 'jspdf'
-import autoTable from 'jspdf-autotable'
+import jsPDFPackage from 'jspdf'
+import autoTablePackage from 'jspdf-autotable'
 
-const money = (n) => `Rs. ${Number(n || 0).toFixed(2)}`
+const jsPDF = jsPDFPackage.jsPDF || jsPDFPackage
+const autoTable = autoTablePackage.default || autoTablePackage
+
+const money = (n) => `Rs. ${Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
 const ones = [
   '', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
@@ -74,58 +77,65 @@ export function buildInvoicePdf(invoice, settings) {
 
   // Header
   doc.setFillColor(7, 17, 31)
-  doc.roundedRect(margin, 12, pageW - margin * 2, 35, 4, 4, 'F')
+  doc.roundedRect(margin, 12, pageW - margin * 2, 43, 4, 4, 'F')
 
   if (settings.logo) {
     try {
       const fmt = settings.logo.startsWith('data:image/jpeg') ? 'JPEG' : 'PNG'
-      doc.addImage(settings.logo, fmt, margin + 6, 18, 22, 22)
+      doc.addImage(settings.logo, fmt, margin + 6, 20, 22, 22)
     } catch {}
   }
 
   const titleX = settings.logo ? margin + 34 : margin + 6
   doc.setTextColor(255, 255, 255)
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(17)
-  doc.text(settings.businessName || 'Smart Parts Billing', titleX, 24)
+  doc.setFontSize(15)
+  const businessLines = doc.splitTextToSize(settings.businessName || 'Smart Parts Billing', 88).slice(0, 2)
+  doc.text(businessLines, titleX, 22)
 
   doc.setFont('helvetica', 'normal')
-  doc.setFontSize(8.2)
-  if (settings.address) doc.text(String(settings.address).slice(0, 78), titleX, 30)
-  if (settings.phone) doc.text(`Mob: ${settings.phone}`, titleX, 35)
-  if (settings.pan) doc.text(`PAN: ${settings.pan}`, titleX, 40)
+  doc.setFontSize(7.7)
+  let businessMetaY = 27 + Math.max(0, businessLines.length - 1) * 5
+  if (settings.address) {
+    const businessAddress = doc.splitTextToSize(String(settings.address), 88).slice(0, 2)
+    doc.text(businessAddress, titleX, businessMetaY)
+    businessMetaY += businessAddress.length * 3.7
+  }
+  if (settings.phone) { doc.text(`Mob: ${settings.phone}`, titleX, businessMetaY); businessMetaY += 4 }
+  if (settings.pan) doc.text(`PAN: ${settings.pan}`, titleX, businessMetaY)
 
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(13)
-  doc.text('INVOICE', pageW - margin - 6, 24, { align: 'right' })
+  doc.text('NON-GST INVOICE', pageW - margin - 6, 23, { align: 'right' })
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(9)
   doc.text(invoice.invoiceNo || '-', pageW - margin - 6, 31, { align: 'right' })
-  doc.text(invoice.date || '-', pageW - margin - 6, 37, { align: 'right' })
+  doc.text(invoice.date || '-', pageW - margin - 6, 38, { align: 'right' })
 
   // Customer block
   doc.setTextColor(15, 23, 42)
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(9)
-  doc.text('BILL TO', margin, 58)
+  doc.text('BILL TO', margin, 67)
   doc.setFontSize(12)
-  doc.text(invoice.customerName || '-', margin, 65)
+  const customerNameLines = doc.splitTextToSize(invoice.customerName || '-', 140).slice(0, 2)
+  doc.text(customerNameLines, margin, 74)
 
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(9)
-  let customerY = 71
+  let customerY = 76 + customerNameLines.length * 5
   if (invoice.phone) {
     doc.text(String(invoice.phone), margin, customerY)
     customerY += 5
   }
   if (invoice.address) {
-    const addressLines = doc.splitTextToSize(String(invoice.address), 118)
+    const addressLines = doc.splitTextToSize(String(invoice.address), 140)
     doc.text(addressLines, margin, customerY)
     customerY += addressLines.length * 4
   }
 
   // Item table
-  const startY = Math.max(84, customerY + 5)
+  const startY = Math.max(92, customerY + 5)
   const rows = (invoice.items || []).map((item, i) => [
     String(i + 1),
     item.partNo || '-',
@@ -143,6 +153,7 @@ export function buildInvoicePdf(invoice, settings) {
     body: rows,
     theme: 'grid',
     showHead: 'everyPage',
+    rowPageBreak: 'avoid',
     styles: {
       fontSize: 8,
       cellPadding: 2.3,
@@ -156,12 +167,12 @@ export function buildInvoicePdf(invoice, settings) {
       fillColor: [13, 32, 55],
       textColor: [255, 255, 255],
       fontStyle: 'bold',
-      halign: 'center',
+      halign: 'left',
     },
     columnStyles: {
       0: { cellWidth: 8, halign: 'center' },
       1: { cellWidth: 27 },
-      2: { cellWidth: 56 },
+      2: { cellWidth: 58 },
       3: { cellWidth: 18, halign: 'center' },
       4: { cellWidth: 14, halign: 'right' },
       5: { cellWidth: 26, halign: 'right' },
@@ -169,8 +180,8 @@ export function buildInvoicePdf(invoice, settings) {
     },
   })
 
-  let y = ensureRoom(doc, doc.lastAutoTable.finalY + 8, 70)
-  const x1 = pageW - margin - 70
+  let y = ensureRoom(doc, doc.lastAutoTable.finalY + 8, 76)
+  const x1 = pageW - margin - 78
   const x2 = pageW - margin
 
   const summary = [
@@ -179,24 +190,29 @@ export function buildInvoicePdf(invoice, settings) {
     ['Other Charges', money(invoice.otherCharges)],
   ]
 
+  doc.setFillColor(247, 249, 252)
+  doc.setDrawColor(205, 215, 228)
+  doc.roundedRect(x1, y - 5, 78, 34, 2.5, 2.5, 'FD')
   doc.setTextColor(15, 23, 42)
-  doc.setFontSize(9)
+  doc.setFontSize(8.5)
   summary.forEach(([label, value]) => {
     doc.setFont('helvetica', 'normal')
-    doc.text(label, x1, y)
+    doc.text(label, x1 + 5, y)
     doc.setFont('helvetica', 'bold')
-    doc.text(value, x2, y, { align: 'right' })
-    y += 6
+    doc.text(value, x2 - 5, y, { align: 'right' })
+    y += 5.5
   })
 
-  doc.setDrawColor(180, 193, 210)
-  doc.line(x1, y - 2, x2, y - 2)
+  doc.setFillColor(13, 32, 55)
+  doc.roundedRect(x1 + 2, y - 2, 74, 11, 2, 2, 'F')
+  doc.setTextColor(255, 255, 255)
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(13)
-  doc.text('Grand Total', x1, y + 5)
-  doc.text(money(invoice.total), x2, y + 5, { align: 'right' })
+  doc.setFontSize(10)
+  doc.text('Grand Total', x1 + 6, y + 5)
+  doc.text(money(invoice.total), x2 - 6, y + 5, { align: 'right' })
 
-  y += 17
+  y += 20
+  doc.setTextColor(15, 23, 42)
   doc.setFontSize(8)
   doc.setFont('helvetica', 'bold')
   doc.text('AMOUNT IN WORDS', margin, y)
@@ -228,14 +244,18 @@ export function buildInvoicePdf(invoice, settings) {
   doc.setFontSize(7.5)
   doc.text(settings.businessName || '', (signatureX1 + signatureX2) / 2, y + 18, { align: 'center' })
 
-  // Footer on every page
+  // Footer and page number on every page
   const totalPages = doc.getNumberOfPages()
   for (let page = 1; page <= totalPages; page += 1) {
     doc.setPage(page)
+    doc.setDrawColor(220, 226, 235)
+    doc.line(margin, pageH - 13, pageW - margin, pageH - 13)
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(7.5)
     doc.setTextColor(91, 105, 125)
-    doc.text(settings.footerNote || 'Thank you for your business.', pageW / 2, pageH - 8, { align: 'center' })
+    const footer = doc.splitTextToSize(settings.footerNote || 'Thank you for your business.', pageW - margin * 2 - 30)[0]
+    doc.text(footer, margin, pageH - 8)
+    doc.text(`Page ${page} of ${totalPages}`, pageW - margin, pageH - 8, { align: 'right' })
   }
 
   return doc
@@ -252,9 +272,9 @@ export async function shareInvoicePdf(invoice, settings) {
 
   if (navigator.canShare?.({ files: [file] })) {
     await navigator.share({ title: invoice.invoiceNo, text: `Invoice ${invoice.invoiceNo}`, files: [file] })
-    return true
+    return { shared: true, downloaded: false }
   }
 
   doc.save(`${invoice.invoiceNo}.pdf`)
-  return false
+  return { shared: false, downloaded: true }
 }

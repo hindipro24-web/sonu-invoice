@@ -50,6 +50,15 @@ function calcInvoice(inv) {
   return { ...inv, subtotal, total }
 }
 
+function invoiceError(inv) {
+  if (!String(inv.customerName || '').trim()) return 'Customer name required'
+  if (!String(inv.date || '').trim()) return 'Invoice date required'
+  if (!Array.isArray(inv.items) || !inv.items.length) return 'Add at least one item'
+  const invalidItem = inv.items.find(item => !String(item.description || '').trim() || !Number.isFinite(Number(item.qty)) || Number(item.qty) < 1 || !Number.isFinite(Number(item.rate)) || Number(item.rate) < 0)
+  if (invalidItem) return 'Check item description, quantity and rate'
+  return ''
+}
+
 function useToast() {
   const [toast, setToast] = useState(null)
   const show = (message, tone = 'success') => {
@@ -119,7 +128,7 @@ function Shell({ view, setView, settings, invoices, children, onBackup, sidebarO
         </nav>
         <div className="sidebar-foot">
           <button className="backup-btn" onClick={onBackup}><Database size={18}/><div><strong>Export backup</strong><span>Keep a safe copy</span></div><ChevronRight size={17}/></button>
-          <div className="version-row"><span>V5 Clean Pro</span><BadgeCheck size={15}/></div>
+          <div className="version-row"><span>V5.2 Client Final</span><BadgeCheck size={15}/></div>
         </div>
       </aside>
       {sidebarOpen && <button className="sidebar-scrim" aria-label="Close menu" onClick={() => setSidebarOpen(false)} />}
@@ -198,7 +207,14 @@ function InvoiceEditor({ invoice, setInvoice, parts, settings, invoices, onSave,
   const calculated = calcInvoice(invoice)
   const results = useMemo(() => {
     const q = query.trim().toLowerCase(); if (!q) return []
-    return parts.filter(p => `${p.partNo} ${p.description} ${p.unit}`.toLowerCase().includes(q)).slice(0, 8)
+    const tokens = q.split(/\s+/).filter(Boolean)
+    return parts
+      .filter(p => { const hay = `${p.partNo} ${p.description} ${p.size || ''} ${p.unit}`.toLowerCase(); return tokens.every(token => hay.includes(token)) })
+      .sort((a,b) => {
+        const aNo=String(a.partNo || '').toLowerCase(); const bNo=String(b.partNo || '').toLowerCase()
+        return Number(bNo===q)-Number(aNo===q) || Number(bNo.startsWith(q))-Number(aNo.startsWith(q))
+      })
+      .slice(0, 8)
   }, [query, parts])
 
   useEffect(() => {
@@ -223,14 +239,25 @@ function InvoiceEditor({ invoice, setInvoice, parts, settings, invoices, onSave,
 
   const save = () => onSave(calcInvoice(invoice))
   const preview = () => {
-    if (!invoice.items.length) return showToast('Add at least one item', 'error')
+    const error = invoiceError(invoice)
+    if (error) return showToast(error, 'error')
     const url = buildInvoicePdf(calcInvoice(invoice), settings).output('bloburl')
     window.open(url, '_blank', 'noopener,noreferrer')
   }
-  const download = () => invoice.items.length ? downloadInvoicePdf(calcInvoice(invoice), settings) : showToast('Add at least one item', 'error')
+  const download = () => {
+    const error = invoiceError(invoice)
+    if (error) return showToast(error, 'error')
+    downloadInvoicePdf(calcInvoice(invoice), settings)
+  }
   const share = async () => {
-    if (!invoice.items.length) return showToast('Add at least one item', 'error')
-    try { const shared = await shareInvoicePdf(calcInvoice(invoice), settings); showToast(shared ? 'Share sheet opened' : 'PDF downloaded') } catch { showToast('Share cancelled', 'error') }
+    const error = invoiceError(invoice)
+    if (error) return showToast(error, 'error')
+    try {
+      const result = await shareInvoicePdf(calcInvoice(invoice), settings)
+      showToast(result.shared ? 'Share sheet opened — select WhatsApp' : 'PDF downloaded — attach it in WhatsApp', result.shared ? 'success' : 'info')
+    } catch (shareError) {
+      showToast(shareError?.name === 'AbortError' ? 'Sharing cancelled' : 'Could not create or share PDF', 'error')
+    }
   }
 
   return <motion.div className="page" initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }}>
@@ -250,7 +277,7 @@ function InvoiceEditor({ invoice, setInvoice, parts, settings, invoices, onSave,
         <Card className="form-card items-card">
           <div className="section-head"><div><span className="eyebrow">02 • ITEMS</span><h2>Add parts</h2></div><span className="catalog-chip"><Boxes size={15}/> {parts.length} parts</span></div>
           <div className="part-search-row">
-            <div className="search-box"><Search size={20}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search part no., description or unit..." />{query && <button onClick={()=>setQuery('')}><X size={17}/></button>}
+            <div className="search-box"><Search size={20}/><input value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&results[0]){e.preventDefault();addPart(results[0])}}} placeholder="Search part no., description, size or unit..." />{query && <button onClick={()=>setQuery('')} aria-label="Clear part search"><X size={17}/></button>}
               {results.length > 0 && <div className="search-popover">{results.map(p => <button key={`${p.id}-${p.unit}`} onClick={()=>addPart(p)}><div><strong>{p.partNo}</strong><span>{p.description} • {p.unit}</span></div><b>{money(p.rate)}</b><Plus size={18}/></button>)}</div>}
             </div>
             <button className="secondary-btn" onClick={()=>setCustomOpen(true)}><PackagePlus size={18}/> Custom Item</button>
@@ -261,7 +288,7 @@ function InvoiceEditor({ invoice, setInvoice, parts, settings, invoices, onSave,
               <div className="item-desc"><span className="item-code">{item.partNo}</span><strong>{item.description}</strong><small>{item.unit}</small></div>
               <input className="size-input" value={item.size || ''} placeholder="12mm" onChange={e=>updateItem(item.id,{size:e.target.value})}/>
               <div className="qty-control"><button onClick={()=>updateItem(item.id,{qty:Math.max(1,Number(item.qty)-1)})}><Minus size={16}/></button><input value={item.qty} inputMode="numeric" onChange={e=>updateItem(item.id,{qty:Math.max(1,Number(e.target.value)||1)})}/><button onClick={()=>updateItem(item.id,{qty:Number(item.qty)+1})}><Plus size={16}/></button></div>
-              <div className="money-input"><span>₹</span><input value={item.rate} inputMode="decimal" onChange={e=>updateItem(item.id,{rate:Number(e.target.value)})}/></div>
+              <div className="money-input"><span>₹</span><input type="number" min="0" step="0.01" value={item.rate} inputMode="decimal" onChange={e=>updateItem(item.id,{rate:Math.max(0,Number(e.target.value)||0)})}/></div>
               <strong className="line-total">{money(Number(item.qty)*Number(item.rate))}</strong>
               <button className="delete-btn" onClick={()=>removeItem(item.id)}><Trash2 size={18}/></button>
             </motion.div>)}
@@ -270,7 +297,7 @@ function InvoiceEditor({ invoice, setInvoice, parts, settings, invoices, onSave,
 
         <Card className="form-card">
           <div className="section-head"><div><span className="eyebrow">03 • FINAL DETAILS</span><h2>Adjustments & notes</h2></div></div>
-          <div className="form-grid cols-2"><Field label="Discount (₹)"><input type="number" min="0" value={invoice.discount} onChange={e=>setInvoice({...invoice,discount:Number(e.target.value)})}/></Field><Field label="Other Charges (₹)"><input type="number" min="0" value={invoice.otherCharges} onChange={e=>setInvoice({...invoice,otherCharges:Number(e.target.value)})}/></Field></div>
+          <div className="form-grid cols-2"><Field label="Discount (₹)"><input type="number" min="0" step="0.01" value={invoice.discount} onChange={e=>setInvoice({...invoice,discount:Math.max(0,Number(e.target.value)||0)})}/></Field><Field label="Other Charges (₹)"><input type="number" min="0" step="0.01" value={invoice.otherCharges} onChange={e=>setInvoice({...invoice,otherCharges:Math.max(0,Number(e.target.value)||0)})}/></Field></div>
           <Field label="Invoice Note" className="mt-16"><textarea rows="3" value={invoice.note} onChange={e=>setInvoice({...invoice,note:e.target.value})} placeholder="Optional invoice note" /></Field>
         </Card>
       </div>
@@ -316,13 +343,25 @@ function CustomersPage({ invoices }) {
 }
 
 function PartsPage({ parts, setParts, showToast }) {
-  const [q,setQ]=useState(''); const [addOpen,setAddOpen]=useState(false); const [custom,setCustom]=useState({partNo:'',description:'',unit:'NOS',rate:''})
-  const rows=parts.filter(p=>`${p.partNo} ${p.description} ${p.unit}`.toLowerCase().includes(q.toLowerCase()))
-  const updateRate=(id,rate)=>{const next=parts.map(p=>p.id===id?{...p,rate:Number(rate)}:p);setParts(next);storage.saveParts(next)}
-  const add=()=>{if(!custom.description.trim())return showToast('Description required','error');const next=[...parts,{...custom,id:Date.now(),rate:Number(custom.rate||0)}];setParts(next);storage.saveParts(next);setAddOpen(false);setCustom({partNo:'',description:'',unit:'NOS',rate:''});showToast('Custom part added')}
-  return <motion.div className="page" initial={{opacity:0,y:12}} animate={{opacity:1,y:0}}><PageHeader eyebrow="PARTS MASTER" title="Parts & Rates" text={`${parts.length} catalog items ready for billing.`} action={<button className="primary-btn" onClick={()=>setAddOpen(true)}><Plus size={18}/> Add Part</button>} />
-    <Card className="table-card"><div className="toolbar"><div className="search-box simple"><Search size={19}/><input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search part number, description or unit..."/></div><span className="catalog-chip"><Boxes size={15}/>{rows.length} shown</span></div><div className="responsive-table parts-table"><div className="rt-head"><span>PART NO.</span><span>DESCRIPTION</span><span>UNIT</span><span>RATE</span><span>STATUS</span></div>{rows.map(p=><div className="rt-row" key={`${p.id}-${p.unit}`}><div data-label="Part No."><strong>{p.partNo}</strong></div><div data-label="Description"><strong>{p.description}</strong></div><div data-label="Unit"><span>{p.unit}</span></div><div data-label="Rate"><div className="money-input compact"><span>₹</span><input type="number" value={p.rate} onChange={e=>updateRate(p.id,e.target.value)}/></div></div><div data-label="Status"><span className="active-chip"><CheckCircle2 size={14}/> Active</span></div></div>)}</div></Card>
-    <AnimatePresence>{addOpen&&<Modal title="Add Part" onClose={()=>setAddOpen(false)}><div className="form-grid cols-2"><Field label="Part No."><input value={custom.partNo} onChange={e=>setCustom({...custom,partNo:e.target.value})}/></Field><Field label="Unit"><input value={custom.unit} onChange={e=>setCustom({...custom,unit:e.target.value})}/></Field></div><Field className="mt-16" label="Description"><input value={custom.description} onChange={e=>setCustom({...custom,description:e.target.value})}/></Field><Field className="mt-16" label="Rate (₹)"><input type="number" value={custom.rate} onChange={e=>setCustom({...custom,rate:e.target.value})}/></Field><div className="modal-actions"><button className="secondary-btn" onClick={()=>setAddOpen(false)}>Cancel</button><button className="primary-btn" onClick={add}><Plus size={17}/> Add Part</button></div></Modal>}</AnimatePresence>
+  const emptyPart = {partNo:'',description:'',size:'',unit:'NOS',rate:''}
+  const [q,setQ]=useState(''); const [editorOpen,setEditorOpen]=useState(false); const [editingId,setEditingId]=useState(null); const [custom,setCustom]=useState(emptyPart)
+  const queryTokens=q.trim().toLowerCase().split(/\s+/).filter(Boolean)
+  const rows=parts.filter(p=>{const hay=`${p.partNo} ${p.description} ${p.size || ''} ${p.unit}`.toLowerCase();return queryTokens.every(token=>hay.includes(token))})
+  const openAdd=()=>{setEditingId(null);setCustom(emptyPart);setEditorOpen(true)}
+  const openEdit=(part)=>{setEditingId(part.id);setCustom({partNo:part.partNo || '',description:part.description || '',size:part.size || '',unit:part.unit || 'NOS',rate:String(part.rate ?? '')});setEditorOpen(true)}
+  const closeEditor=()=>{setEditorOpen(false);setEditingId(null);setCustom(emptyPart)}
+  const savePart=()=>{
+    const description=custom.description.trim(); const rate=Number(custom.rate || 0)
+    if(!description)return showToast('Description required','error')
+    if(!Number.isFinite(rate)||rate<0)return showToast('Enter a valid rate','error')
+    const clean={partNo:custom.partNo.trim() || 'CUSTOM',description,size:custom.size.trim(),unit:custom.unit.trim() || 'NOS',rate}
+    const next=editingId===null?[...parts,{...clean,id:Date.now()}]:parts.map(p=>p.id===editingId?{...p,...clean}:p)
+    setParts(next);storage.saveParts(next);closeEditor();showToast(editingId===null?'Part added':'Part updated')
+  }
+  const deletePart=(part)=>{if(!confirm(`Delete ${part.partNo || part.description} from Parts Master?`))return;const next=parts.filter(p=>p.id!==part.id);setParts(next);storage.saveParts(next);showToast('Part deleted')}
+  return <motion.div className="page" initial={{opacity:0,y:12}} animate={{opacity:1,y:0}}><PageHeader eyebrow="PARTS MASTER" title="Parts & Rates" text={`${parts.length} catalog items ready for billing.`} action={<button className="primary-btn" onClick={openAdd}><Plus size={18}/> Add Part</button>} />
+    <Card className="table-card"><div className="toolbar"><div className="search-box simple"><Search size={19}/><input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search part number, description, size or unit..."/></div><span className="catalog-chip"><Boxes size={15}/>{rows.length} shown</span></div>{rows.length?<div className="responsive-table parts-table"><div className="rt-head"><span>PART NO.</span><span>DESCRIPTION</span><span>SIZE</span><span>UNIT</span><span>RATE</span><span>ACTIONS</span></div>{rows.map(p=><div className="rt-row" key={`${p.id}-${p.unit}`}><div data-label="Part No."><strong>{p.partNo}</strong></div><div data-label="Description"><strong>{p.description}</strong></div><div data-label="Size"><span>{p.size || '—'}</span></div><div data-label="Unit"><span>{p.unit}</span></div><div data-label="Rate"><strong>{money(p.rate)}</strong></div><div className="row-actions" data-label="Actions"><button onClick={()=>openEdit(p)} title="Edit part" aria-label={`Edit ${p.partNo || p.description}`}><Pencil size={17}/></button><button className="danger" onClick={()=>deletePart(p)} title="Delete part" aria-label={`Delete ${p.partNo || p.description}`}><Trash2 size={17}/></button></div></div>)}</div>:<EmptyState icon={Boxes} title="No matching parts" text="Try another part number, description, size or unit."/>}</Card>
+    <AnimatePresence>{editorOpen&&<Modal title={editingId===null?'Add Part':'Edit Part'} onClose={closeEditor}><div className="form-grid cols-2"><Field label="Part No."><input value={custom.partNo} onChange={e=>setCustom({...custom,partNo:e.target.value})}/></Field><Field label="Unit"><input value={custom.unit} onChange={e=>setCustom({...custom,unit:e.target.value})}/></Field></div><Field className="mt-16" label="Description"><input value={custom.description} onChange={e=>setCustom({...custom,description:e.target.value})}/></Field><div className="form-grid cols-2 mt-16"><Field label="Size"><input value={custom.size} placeholder="e.g. 12mm" onChange={e=>setCustom({...custom,size:e.target.value})}/></Field><Field label="Rate (₹)"><input type="number" min="0" step="0.01" value={custom.rate} onChange={e=>setCustom({...custom,rate:e.target.value})}/></Field></div><div className="modal-actions"><button className="secondary-btn" onClick={closeEditor}>Cancel</button><button className="primary-btn" onClick={savePart}><Save size={17}/> {editingId===null?'Add Part':'Save Changes'}</button></div></Modal>}</AnimatePresence>
   </motion.div>
 }
 
@@ -331,7 +370,7 @@ function SettingsPage({ settings, setSettings, showToast, onImport }) {
   useEffect(()=>{setDraft(settings);setDirty(false)},[settings])
   const patch=(p)=>{setDraft(d=>({...d,...p}));setDirty(true)}
   const uploadLogo=(file)=>{if(!file)return; if(file.size>2*1024*1024)return showToast('Logo must be under 2 MB','error'); const r=new FileReader();r.onload=()=>patch({logo:r.result});r.readAsDataURL(file)}
-  const save=()=>{storage.saveSettings(draft);const next=storage.getSettings();setSettings(next);setDraft(next);setDirty(false);showToast('Settings saved successfully')}
+  const save=()=>{const businessName=draft.businessName.trim();const invoicePrefix=draft.invoicePrefix.trim();if(!businessName)return showToast('Business name required','error');if(!invoicePrefix)return showToast('Invoice prefix required','error');storage.saveSettings({...draft,businessName,invoicePrefix});const next=storage.getSettings();setSettings(next);setDraft(next);setDirty(false);showToast('Settings saved successfully')}
   return <motion.div className="page settings-page" initial={{opacity:0,y:12}} animate={{opacity:1,y:0}}><PageHeader eyebrow="WORKSPACE SETTINGS" title="Brand & Invoice Settings" text="Control how your business appears inside the app and on every PDF." action={<button className="primary-btn settings-save-action" disabled={!dirty} onClick={save}><Save size={18}/> Save Changes</button>} />
     <div className="settings-layout">
       <div className="settings-main">
@@ -341,7 +380,7 @@ function SettingsPage({ settings, setSettings, showToast, onImport }) {
           <Field label="Business Address" className="mt-16"><div className="input-icon"><MapPin size={18}/><input value={draft.address} onChange={e=>patch({address:e.target.value})}/></div></Field>
         </Card>
         <Card className="form-card"><div className="section-head"><div><span className="eyebrow">INVOICE</span><h2>Invoice settings</h2></div></div><Field label="Invoice Prefix"><input value={draft.invoicePrefix} onChange={e=>patch({invoicePrefix:e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g,'')})}/></Field><Field label="PAN No. (Optional)" className="mt-16"><input value={draft.pan || ''} placeholder="Enter PAN number" onChange={e=>patch({pan:e.target.value.toUpperCase()})}/></Field><Field label="PDF Footer Note" className="mt-16"><textarea rows="2" value={draft.footerNote} onChange={e=>patch({footerNote:e.target.value})}/></Field></Card>
-        <Card className="form-card"><div className="section-head"><div><span className="eyebrow">DATA</span><h2>Backup & restore</h2></div></div><p className="muted-copy">Export a JSON backup before moving the software to another device.</p><div className="backup-actions"><button className="secondary-btn" onClick={()=>{const blob=new Blob([JSON.stringify(storage.exportAll(),null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`smart-billing-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href)}}><Download size={18}/> Export Backup</button><button className="secondary-btn" onClick={()=>importRef.current?.click()}><Upload size={18}/> Import Backup</button><input ref={importRef} hidden type="file" accept="application/json" onChange={e=>onImport(e.target.files?.[0])}/></div></Card>
+        <Card className="form-card"><div className="section-head"><div><span className="eyebrow">DATA</span><h2>Backup & restore</h2></div></div><p className="muted-copy">Export a JSON backup before moving the software to another device.</p><div className="backup-actions"><button className="secondary-btn" onClick={()=>{const blob=new Blob([JSON.stringify(storage.exportAll(),null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`smart-billing-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href)}}><Download size={18}/> Export Backup</button><button className="secondary-btn" onClick={()=>importRef.current?.click()}><Upload size={18}/> Import Backup</button><input ref={importRef} hidden type="file" accept="application/json" onChange={e=>{onImport(e.target.files?.[0]);e.target.value=''}}/></div></Card>
       </div>
       <aside className="settings-preview"><Card className="brand-preview-card"><span className="eyebrow">LIVE PREVIEW</span><LogoMark settings={draft} size="xl"/><strong>{draft.businessName||'Business Name'}</strong><span>{draft.phone||'Phone number'}</span><small>{draft.address||'Business address'}</small><div className="mini-invoice"><div><span>INVOICE</span><strong>{draft.invoicePrefix||'INV'}-0001</strong></div><div className="mini-line"/><div className="mini-line short"/><div className="mini-total"><span>Grand Total</span><strong>₹12,450.00</strong></div></div></Card></aside>
     </div>
@@ -359,8 +398,7 @@ export default function App() {
   const [toast,showToast]=useToast()
 
   const saveInvoice=(inv)=>{
-    if(!inv.customerName.trim())return showToast('Customer name required','error')
-    if(!inv.items.length)return showToast('Add at least one item','error')
+    const error=invoiceError(inv);if(error)return showToast(error,'error')
     const now=new Date().toISOString(); const saved={...inv,savedAt:now}
     const exists=invoices.some(i=>i.id===saved.id); const next=exists?invoices.map(i=>i.id===saved.id?saved:i):[saved,...invoices]
     setInvoices(next);storage.saveInvoices(next);setInvoice(saved);storage.clearDraft();showToast(exists?'Invoice updated':'Invoice saved successfully')
@@ -369,7 +407,7 @@ export default function App() {
   const editInvoice=(inv)=>{setInvoice({...inv});setView('invoice')}
   const deleteInvoice=(id)=>{if(!confirm('Delete this invoice permanently?'))return;const next=invoices.filter(i=>i.id!==id);setInvoices(next);storage.saveInvoices(next);showToast('Invoice deleted')}
   const exportBackup=()=>{const blob=new Blob([JSON.stringify(storage.exportAll(),null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`smart-billing-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href);showToast('Backup exported')}
-  const importBackup=(file)=>{if(!file)return;const r=new FileReader();r.onload=()=>{try{const data=JSON.parse(r.result);storage.importAll(data);setSettings(storage.getSettings());setInvoices(storage.getInvoices());setParts(storage.getParts(DEFAULT_PARTS));setInvoice(storage.getDraft()||blankInvoice(storage.getSettings(),storage.getInvoices()));showToast('Backup restored')}catch{showToast('Invalid backup file','error')}};r.readAsText(file)}
+  const importBackup=(file)=>{if(!file)return;if(file.size>5*1024*1024)return showToast('Backup file is too large','error');if(!confirm('Restore this backup? Current settings, parts and invoices may be replaced.'))return;const r=new FileReader();r.onload=()=>{try{const data=JSON.parse(r.result);storage.importAll(data);setSettings(storage.getSettings());setInvoices(storage.getInvoices());setParts(storage.getParts(DEFAULT_PARTS));setInvoice(storage.getDraft()||blankInvoice(storage.getSettings(),storage.getInvoices()));showToast('Backup restored')}catch{showToast('Invalid or unsupported backup file','error')}};r.onerror=()=>showToast('Could not read backup file','error');r.readAsText(file)}
 
   return <Shell view={view} setView={setView} settings={settings} invoices={invoices} onBackup={exportBackup} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen}>
     <AnimatePresence mode="wait">
@@ -382,6 +420,6 @@ export default function App() {
         {view==='settings'&&<SettingsPage settings={settings} setSettings={setSettings} showToast={showToast} onImport={importBackup}/>} 
       </motion.div>
     </AnimatePresence>
-    <AnimatePresence>{toast&&<motion.div className={`toast toast-${toast.tone}`} initial={{opacity:0,y:22,scale:.96}} animate={{opacity:1,y:0,scale:1}} exit={{opacity:0,y:16}}><CheckCircle2 size={19}/><span>{toast.message}</span></motion.div>}</AnimatePresence>
+    <AnimatePresence>{toast&&<motion.div className={`toast toast-${toast.tone}`} initial={{opacity:0,y:22,scale:.96}} animate={{opacity:1,y:0,scale:1}} exit={{opacity:0,y:16}}>{toast.tone==='error'?<X size={19}/>:<CheckCircle2 size={19}/>}<span>{toast.message}</span></motion.div>}</AnimatePresence>
   </Shell>
 }

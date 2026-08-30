@@ -6,6 +6,15 @@ export default defineConfig({
   base: '/sonu-invoice/',
   build: {
     sourcemap: false,
-    target: 'es2020'
+    target: 'es2020',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ['react', 'react-dom', 'framer-motion'],
+          pdf: ['jspdf', 'jspdf-autotable'],
+          icons: ['lucide-react'],
+        },
+      },
+    },
   }
 })
