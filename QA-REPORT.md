@@ -1,38 +1,37 @@
-# QA Report — Smart Parts Billing Client Final v5.2
+# QA Report — Smart Parts Billing V6
 
 ## Result
-Production build and targeted V5.2 checks passed on 2026-08-30.
 
-## V5.2 verified changes
-- Parts Master supports add, edit and delete with Part No., Description, Size, Unit and Rate.
-- Invoice and Parts Master searches support multiple words, size values and part numbers.
-- Enter adds the top matching catalog part from the invoice search.
-- Invoice save, PDF preview, PDF download and sharing use the same validation rules.
-- Rate, discount and other charges cannot become negative through the UI.
-- Settings require a business name and invoice prefix.
-- Backup import validates structure and file size and confirms before replacing local data.
-- Unsupported file sharing downloads the PDF and tells the user to attach it in WhatsApp.
+V6 web production build and Android web-to-native sync passed on 2026-08-30.
 
-## PDF verification
-- Generated and rendered an A4 stress-test invoice with 34 long-description items.
-- Long business name, business address, customer name and customer address wrap without clipping.
-- Part No., Description, Size, Qty, Rate and Amount columns remain aligned.
-- Multi-page rows stay intact instead of splitting across pages.
-- Subtotal, Discount, Other Charges and Grand Total remain in one aligned summary card.
-- Amount in Words, note, signature, footer and page numbering render without overlap.
-- Final test PDF: 3 A4 pages, readable text extraction and zero render errors.
+## Verified V6 changes
 
-## Build verification
-- `npm install --package-lock-only` completed successfully.
+- Bright white and royal-blue design tokens are applied throughout the app.
+- Navigation, cards, forms, item controls, tables, modals and action buttons have responsive V6 styles.
+- Mobile layouts retain normal scrolling with no fixed bottom navigation.
+- Existing invoice, parts, customers, settings, PDF, backup and local-storage flows remain wired to their original logic.
+- Invoice PDF header, table and total accents now match the royal-blue V6 brand.
+- The app-install control handles browser install prompts, installed state and manual Add to Home screen fallback.
+- Branded 192 px, 512 px, maskable and Apple touch icons are present.
+
+## PWA verification
+
 - `npm run build` completed successfully with Vite.
-- Production bundles are split by React, PDF and icon dependencies; no oversized-chunk warning remains.
-- `pdf.js` and `storage.js` pass Node syntax checks.
-- Package and manifest JSON are valid.
-- 65 default catalog parts remain present.
-- GitHub Pages base remains `/sonu-invoice/`.
-- GitHub Actions deployment workflow remains configured for `main`.
+- The PWA build generated `sw.js`, Workbox runtime and service-worker registration.
+- 20 production entries were added to the offline precache.
+- Manifest start URL and scope remain `/sonu-invoice/`.
+- GitHub Pages continues to use the repository base path.
 
-## Architecture retained
-- React 18 + Vite application.
-- Local browser persistence with JSON backup/restore.
-- No login, cloud sync or multi-device database in this release.
+## Android verification
+
+- Capacitor Android 6.2.1 project generated successfully.
+- `npm run android:sync` completed successfully with relative native asset paths.
+- Android package ID is `com.smartpartsbilling.app`.
+- Android SDK target is API 34 and the project uses Java 17-compatible Gradle tooling.
+- Royal-blue launcher icons and light branded splash assets were generated for all Android densities.
+- Native Filesystem and Share plugins are synced for Android PDF save/open/WhatsApp actions.
+- GitHub Actions includes a clean SDK setup, debug APK build and artifact upload workflow.
+
+## Build environment note
+
+The local workspace could not download the Gradle distribution because outbound access to `services.gradle.org` is blocked. APK compilation is therefore delegated to the included GitHub Actions runner, while the complete Android source and sync steps are verified locally.

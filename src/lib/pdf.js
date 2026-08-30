@@ -1,5 +1,8 @@
 import jsPDFPackage from 'jspdf'
 import autoTablePackage from 'jspdf-autotable'
+import { Capacitor } from '@capacitor/core'
+import { Directory, Filesystem } from '@capacitor/filesystem'
+import { Share } from '@capacitor/share'
 
 const jsPDF = jsPDFPackage.jsPDF || jsPDFPackage
 const autoTable = autoTablePackage.default || autoTablePackage
@@ -76,7 +79,7 @@ export function buildInvoicePdf(invoice, settings) {
   const margin = 14
 
   // Header
-  doc.setFillColor(7, 17, 31)
+  doc.setFillColor(24, 87, 213)
   doc.roundedRect(margin, 12, pageW - margin * 2, 43, 4, 4, 'F')
 
   if (settings.logo) {
@@ -164,7 +167,7 @@ export function buildInvoicePdf(invoice, settings) {
       overflow: 'linebreak',
     },
     headStyles: {
-      fillColor: [13, 32, 55],
+      fillColor: [24, 87, 213],
       textColor: [255, 255, 255],
       fontStyle: 'bold',
       halign: 'left',
@@ -203,7 +206,7 @@ export function buildInvoicePdf(invoice, settings) {
     y += 5.5
   })
 
-  doc.setFillColor(13, 32, 55)
+  doc.setFillColor(24, 87, 213)
   doc.roundedRect(x1 + 2, y - 2, 74, 11, 2, 2, 'F')
   doc.setTextColor(255, 255, 255)
   doc.setFont('helvetica', 'bold')
@@ -261,20 +264,57 @@ export function buildInvoicePdf(invoice, settings) {
   return doc
 }
 
-export function downloadInvoicePdf(invoice, settings) {
-  buildInvoicePdf(invoice, settings).save(`${invoice.invoiceNo}.pdf`)
+const pdfFileName = (invoice) => `${String(invoice.invoiceNo || 'invoice').replace(/[^a-z0-9_-]/gi, '-')}.pdf`
+
+async function writeNativePdf(doc, invoice) {
+  const dataUri = doc.output('datauristring')
+  const base64 = dataUri.slice(dataUri.indexOf(',') + 1)
+  return Filesystem.writeFile({
+    path: `invoices/${pdfFileName(invoice)}`,
+    data: base64,
+    directory: Directory.Cache,
+    recursive: true,
+  })
+}
+
+export async function downloadInvoicePdf(invoice, settings) {
+  const doc = buildInvoicePdf(invoice, settings)
+  if (Capacitor.isNativePlatform()) {
+    const file = await writeNativePdf(doc, invoice)
+    await Share.share({
+      title: invoice.invoiceNo,
+      text: `Invoice ${invoice.invoiceNo}`,
+      files: [file.uri],
+      dialogTitle: 'Save or open invoice PDF',
+    })
+    return { native: true, shared: true, downloaded: false }
+  }
+
+  doc.save(pdfFileName(invoice))
+  return { native: false, shared: false, downloaded: true }
 }
 
 export async function shareInvoicePdf(invoice, settings) {
   const doc = buildInvoicePdf(invoice, settings)
+  if (Capacitor.isNativePlatform()) {
+    const file = await writeNativePdf(doc, invoice)
+    await Share.share({
+      title: invoice.invoiceNo,
+      text: `Invoice ${invoice.invoiceNo}`,
+      files: [file.uri],
+      dialogTitle: 'Share invoice PDF',
+    })
+    return { native: true, shared: true, downloaded: false }
+  }
+
   const blob = doc.output('blob')
-  const file = new File([blob], `${invoice.invoiceNo}.pdf`, { type: 'application/pdf' })
+  const file = new File([blob], pdfFileName(invoice), { type: 'application/pdf' })
 
   if (navigator.canShare?.({ files: [file] })) {
     await navigator.share({ title: invoice.invoiceNo, text: `Invoice ${invoice.invoiceNo}`, files: [file] })
-    return { shared: true, downloaded: false }
+    return { native: false, shared: true, downloaded: false }
   }
 
-  doc.save(`${invoice.invoiceNo}.pdf`)
-  return { shared: false, downloaded: true }
+  doc.save(pdfFileName(invoice))
+  return { native: false, shared: false, downloaded: true }
 }

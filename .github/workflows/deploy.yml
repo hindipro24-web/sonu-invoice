@@ -1,4 +1,4 @@
-name: Deploy Smart Billing V5.2 Client Final
+name: Deploy Smart Billing V6
 
 on:
   push:
@@ -25,7 +25,7 @@ jobs:
         with:
           node-version: 22
       - name: Install
-        run: npm install
+        run: npm ci
       - name: Build
         run: npm run build
       - name: Configure Pages

@@ -1,30 +1,51 @@
-# Smart Parts Billing — Client Final v5.2
+# Smart Parts Billing — V6
 
-Deployment-ready React/Vite non-GST billing app for GitHub Pages.
+Responsive non-GST invoice and parts billing app for web, installable PWA and Android.
 
-## Final scope
-- Clean responsive SaaS UI with normal vertical scrolling
-- No Three.js/WebGL, no fixed bottom nav, no payment/due tracking
-- Customer name, mobile, address and invoice date
-- 65-part searchable catalog + custom items
-- Multi-word catalog search with size support and Enter-to-add
-- Parts Master add, edit and delete controls
-- Item Size, Quantity, Rate and Amount
-- Discount and Other Charges
-- Invoice save/update/delete, invoice history and customer history
-- Business logo, name, phone, address, PAN, invoice prefix and footer settings
-- Professional A4 PDF with wrapped business/customer details, aligned columns, Size, Amount in Words, page numbers and Authorized Signature
-- PDF preview/download and mobile share/WhatsApp share sheet with clear download fallback
-- Local browser persistence + JSON backup/restore
-- GitHub Pages workflow included
+## V6 experience
 
-## V5.2 safeguards
-- Required customer name, invoice date and valid item values before save/PDF/share
-- Non-negative rate, discount and other-charge controls
-- Backup format validation, 5 MB file limit and overwrite confirmation
-- Multi-page PDF rows stay together and totals/signature never overlap the table
+- Bright white and royal-blue professional interface
+- Larger readable controls and clear business-style action buttons
+- Responsive desktop, tablet and phone layouts
+- Dashboard, new invoice, invoice history, customers, Parts Master and settings
+- 65-part searchable catalog, editable size/rate/quantity and custom items
+- Professional A4 PDF preview, download and phone share/WhatsApp flow
+- Local device persistence with JSON backup and restore
+- Installable PWA with offline application shell and automatic updates
+- Capacitor Android project with branded icon and splash screen
+- Native Android PDF share/save flow for WhatsApp, Files and Drive
+- GitHub Actions workflows for Pages deployment and downloadable debug APK
 
-## Deploy
-Push the project contents to the `main` branch of `hindipro24-web/sonu-invoice`. The included GitHub Actions workflow runs `npm install`, `npm run build`, and deploys `dist` to Pages.
+## Local web development
 
-Live path expected by Vite: `/sonu-invoice/`.
+```bash
+npm ci
+npm run dev -- --host 0.0.0.0
+```
+
+Production checks:
+
+```bash
+npm run build
+npm run android:sync
+```
+
+## Android
+
+The native project is in `android/`. With Android SDK 34 and Java 17 installed:
+
+```bash
+npm run android:apk
+```
+
+The debug APK is created at:
+
+`android/app/build/outputs/apk/debug/app-debug.apk`
+
+Pushing to `main` also runs **Build Android APK V6** on GitHub. Download the artifact named **Smart-Parts-Billing-V6-APK** from the completed workflow run.
+
+## Deployment
+
+GitHub Pages base path remains `/sonu-invoice/` and the live URL remains:
+
+`https://hindipro24-web.github.io/sonu-invoice/`

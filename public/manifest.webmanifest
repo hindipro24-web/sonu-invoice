@@ -1,16 +1,34 @@
 {
-  "name": "Smart Parts Billing \u2014 Client Final v5.2",
+  "name": "Smart Parts Billing — V6",
   "short_name": "Smart Billing",
+  "description": "Professional non-GST invoice, parts and customer billing app.",
+  "id": "/sonu-invoice/",
   "start_url": "/sonu-invoice/",
+  "scope": "/sonu-invoice/",
   "display": "standalone",
-  "background_color": "#07111f",
-  "theme_color": "#07111f",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "background_color": "#f4f7fc",
+  "theme_color": "#1857d5",
+  "lang": "en-IN",
+  "categories": ["business", "productivity", "finance"],
   "icons": [
     {
-      "src": "icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }

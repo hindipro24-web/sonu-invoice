@@ -1,0 +1,8 @@
+{
+  "appId": "com.smartpartsbilling.app",
+  "appName": "Smart Parts Billing",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  }
+}

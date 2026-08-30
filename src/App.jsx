@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
+import { Capacitor } from '@capacitor/core'
 import {
   LayoutDashboard, FilePlus2, ReceiptText, Users, Boxes, Settings, Search, Plus, Minus,
   Trash2, Download, Share2, Eye, Save, Upload, Building2, Phone, MapPin,
@@ -68,6 +69,45 @@ function useToast() {
   return [toast, show]
 }
 
+function useInstallPrompt() {
+  const [prompt, setPrompt] = useState(null)
+  const [installed, setInstalled] = useState(false)
+
+  useEffect(() => {
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+      || window.navigator.standalone === true
+      || Capacitor.isNativePlatform()
+    setInstalled(isStandalone)
+
+    const capturePrompt = (event) => {
+      event.preventDefault()
+      setPrompt(event)
+    }
+    const markInstalled = () => {
+      setInstalled(true)
+      setPrompt(null)
+    }
+
+    window.addEventListener('beforeinstallprompt', capturePrompt)
+    window.addEventListener('appinstalled', markInstalled)
+    return () => {
+      window.removeEventListener('beforeinstallprompt', capturePrompt)
+      window.removeEventListener('appinstalled', markInstalled)
+    }
+  }, [])
+
+  const install = async () => {
+    if (installed) return 'installed'
+    if (!prompt) return 'unavailable'
+    await prompt.prompt()
+    const choice = await prompt.userChoice
+    setPrompt(null)
+    return choice.outcome
+  }
+
+  return { install, installed, ready: Boolean(prompt) }
+}
+
 function LogoMark({ settings, size = 'md' }) {
   return (
     <div className={`logo-mark logo-${size}`}>
@@ -107,7 +147,7 @@ function EmptyState({ icon: Icon = ReceiptText, title, text, action }) {
   return <div className="empty-state"><div className="empty-icon"><Icon size={28}/></div><strong>{title}</strong><span>{text}</span>{action}</div>
 }
 
-function Shell({ view, setView, settings, invoices, children, onBackup, sidebarOpen, setSidebarOpen }) {
+function Shell({ view, setView, settings, invoices, children, onBackup, onInstall, installReady, installed, sidebarOpen, setSidebarOpen }) {
   return (
     <div className="app-shell">
       <div className="ambient ambient-a"/><div className="ambient ambient-b"/><div className="grid-glow"/>
@@ -128,14 +168,20 @@ function Shell({ view, setView, settings, invoices, children, onBackup, sidebarO
         </nav>
         <div className="sidebar-foot">
           <button className="backup-btn" onClick={onBackup}><Database size={18}/><div><strong>Export backup</strong><span>Keep a safe copy</span></div><ChevronRight size={17}/></button>
-          <div className="version-row"><span>V5.2 Client Final</span><BadgeCheck size={15}/></div>
+          <div className="version-row"><span>V6 • White & Royal Blue</span><BadgeCheck size={15}/></div>
         </div>
       </aside>
       {sidebarOpen && <button className="sidebar-scrim" aria-label="Close menu" onClick={() => setSidebarOpen(false)} />}
       <main className="main-shell">
         <header className="topbar">
           <div className="topbar-left"><button className="icon-btn mobile-menu" onClick={() => setSidebarOpen(true)}><Menu size={21}/></button><div><span>SMART PARTS BILLING</span><strong>{NAV.find(x => x[0] === view)?.[1]}</strong></div></div>
-          <div className="topbar-right"><span className="online-pill"><i/>Workspace ready</span><button className="primary-btn top-new" onClick={() => setView('invoice')}><Plus size={18}/><span>New Invoice</span></button></div>
+          <div className="topbar-right">
+            <span className="online-pill"><i/>Workspace ready</span>
+            <button className={`install-btn ${installed ? 'installed' : ''}`} onClick={onInstall} disabled={installed} title={installed ? 'App is installed' : 'Install app on this device'}>
+              {installed ? <BadgeCheck size={18}/> : <Download size={18}/>}<span>{installed ? 'App Installed' : installReady ? 'Install App' : 'Get App'}</span>
+            </button>
+            <button className="primary-btn top-new" onClick={() => setView('invoice')}><Plus size={18}/><span>New Invoice</span></button>
+          </div>
         </header>
         <div className="content-shell">{children}</div>
       </main>
@@ -157,11 +203,11 @@ function Dashboard({ invoices, settings, setView }) {
   return <motion.div className="page" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
     <section className="hero-panel">
       <div className="hero-content">
-        <div className="hero-badge"><Sparkles size={15}/> Premium Billing Workspace</div>
-        <h1>Invoices that look as professional as your business.</h1>
-        <p>Create branded bills, manage parts and customers, and share a polished PDF in seconds.</p>
+        <div className="hero-badge"><Sparkles size={15}/> V6 • Business Billing App</div>
+        <h1>Clear billing. Faster work. Better business.</h1>
+        <p>Create professional bills, manage parts and customers, and share a polished PDF from one simple workspace.</p>
         <div className="hero-actions"><button className="primary-btn hero-primary" onClick={()=>setView('invoice')}><FilePlus2 size={19}/> Create Invoice</button><button className="ghost-btn" onClick={()=>setView('invoices')}><ReceiptText size={18}/> View Invoices</button></div>
-        <div className="hero-proof"><span><CheckCircle2 size={15}/> Non-GST ready</span><span><CheckCircle2 size={15}/> PDF aligned</span><span><CheckCircle2 size={15}/> Mobile friendly</span></div>
+        <div className="hero-proof"><span><CheckCircle2 size={15}/> Non-GST ready</span><span><CheckCircle2 size={15}/> Installable app</span><span><CheckCircle2 size={15}/> Mobile friendly</span></div>
       </div>
       <div className="hero-visual">
         <div className="hero-orb" aria-hidden="true"/>
@@ -238,16 +284,30 @@ function InvoiceEditor({ invoice, setInvoice, parts, settings, invoices, onSave,
   }
 
   const save = () => onSave(calcInvoice(invoice))
-  const preview = () => {
+  const preview = async () => {
     const error = invoiceError(invoice)
     if (error) return showToast(error, 'error')
+    if (Capacitor.isNativePlatform()) {
+      try {
+        await downloadInvoicePdf(calcInvoice(invoice), settings)
+        showToast('PDF options opened')
+      } catch (previewError) {
+        showToast(previewError?.name === 'AbortError' ? 'PDF action cancelled' : 'Could not create PDF', 'error')
+      }
+      return
+    }
     const url = buildInvoicePdf(calcInvoice(invoice), settings).output('bloburl')
     window.open(url, '_blank', 'noopener,noreferrer')
   }
-  const download = () => {
+  const download = async () => {
     const error = invoiceError(invoice)
     if (error) return showToast(error, 'error')
-    downloadInvoicePdf(calcInvoice(invoice), settings)
+    try {
+      const result = await downloadInvoicePdf(calcInvoice(invoice), settings)
+      showToast(result.native ? 'PDF options opened' : 'PDF downloaded')
+    } catch (downloadError) {
+      showToast(downloadError?.name === 'AbortError' ? 'PDF action cancelled' : 'Could not create PDF', 'error')
+    }
   }
   const share = async () => {
     const error = invoiceError(invoice)
@@ -321,16 +381,24 @@ function InvoiceEditor({ invoice, setInvoice, parts, settings, invoices, onSave,
 function Field({ label, children, className='' }) { return <label className={`field ${className}`}><span>{label}</span>{children}</label> }
 function Modal({ title, children, onClose }) { return <motion.div className="modal-backdrop" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} onMouseDown={onClose}><motion.div className="modal" initial={{opacity:0,scale:.96,y:12}} animate={{opacity:1,scale:1,y:0}} exit={{opacity:0,scale:.97}} onMouseDown={e=>e.stopPropagation()}><div className="modal-head"><h3>{title}</h3><button className="icon-btn" onClick={onClose}><X size={20}/></button></div>{children}</motion.div></motion.div> }
 
-function InvoicesPage({ invoices, onEdit, onDelete }) {
+function InvoicesPage({ invoices, onEdit, onDelete, showToast }) {
   const [q,setQ]=useState('')
   const rows = useMemo(() => invoices.filter(i => {
     const hay = `${i.invoiceNo} ${i.customerName} ${i.phone}`.toLowerCase()
     return hay.includes(q.toLowerCase())
   }).sort((a,b)=>String(b.savedAt||'').localeCompare(String(a.savedAt||''))), [invoices,q])
+  const download = async (invoice) => {
+    try {
+      const result = await downloadInvoicePdf(invoice, storage.getSettings())
+      showToast(result.native ? 'PDF options opened' : 'PDF downloaded')
+    } catch (downloadError) {
+      showToast(downloadError?.name === 'AbortError' ? 'PDF action cancelled' : 'Could not create PDF', 'error')
+    }
+  }
 
   return <motion.div className="page" initial={{opacity:0,y:12}} animate={{opacity:1,y:0}}><PageHeader eyebrow="BILLING RECORDS" title="Invoices" text="Search, reopen and manage every saved bill." />
     <Card className="table-card"><div className="toolbar"><div className="search-box simple"><Search size={19}/><input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search invoice, customer or mobile..."/></div></div>
-      {rows.length ? <div className="responsive-table simple-invoice-table"><div className="rt-head"><span>INVOICE</span><span>CUSTOMER</span><span>DATE</span><span>AMOUNT</span><span/></div>{rows.map(inv=><div className="rt-row" key={inv.id}><div data-label="Invoice"><strong>{inv.invoiceNo}</strong><small>Saved invoice</small></div><div data-label="Customer"><strong>{inv.customerName}</strong><small>{inv.phone || 'No mobile'}</small></div><div data-label="Date"><strong>{inv.date}</strong></div><div className="rt-amount" data-label="Amount">{money(inv.total)}</div><div className="row-actions"><button onClick={()=>onEdit(inv)} title="Edit"><Pencil size={17}/></button><button onClick={()=>downloadInvoicePdf(inv, storage.getSettings())} title="PDF"><FileDown size={17}/></button><button className="danger" onClick={()=>onDelete(inv.id)} title="Delete"><Trash2 size={17}/></button></div></div>)}</div> : <EmptyState title="No matching invoices" text="Saved invoices will appear here."/>}
+      {rows.length ? <div className="responsive-table simple-invoice-table"><div className="rt-head"><span>INVOICE</span><span>CUSTOMER</span><span>DATE</span><span>AMOUNT</span><span/></div>{rows.map(inv=><div className="rt-row" key={inv.id}><div data-label="Invoice"><strong>{inv.invoiceNo}</strong><small>Saved invoice</small></div><div data-label="Customer"><strong>{inv.customerName}</strong><small>{inv.phone || 'No mobile'}</small></div><div data-label="Date"><strong>{inv.date}</strong></div><div className="rt-amount" data-label="Amount">{money(inv.total)}</div><div className="row-actions"><button onClick={()=>onEdit(inv)} title="Edit"><Pencil size={17}/></button><button onClick={()=>download(inv)} title="PDF"><FileDown size={17}/></button><button className="danger" onClick={()=>onDelete(inv.id)} title="Delete"><Trash2 size={17}/></button></div></div>)}</div> : <EmptyState title="No matching invoices" text="Saved invoices will appear here."/>}
     </Card></motion.div>
 }
 
@@ -396,6 +464,7 @@ export default function App() {
   const [invoice,setInvoice]=useState(()=>storage.getDraft() || blankInvoice(storage.getSettings(), storage.getInvoices()))
   const [sidebarOpen,setSidebarOpen]=useState(false)
   const [toast,showToast]=useToast()
+  const appInstall=useInstallPrompt()
 
   const saveInvoice=(inv)=>{
     const error=invoiceError(inv);if(error)return showToast(error,'error')
@@ -408,13 +477,20 @@ export default function App() {
   const deleteInvoice=(id)=>{if(!confirm('Delete this invoice permanently?'))return;const next=invoices.filter(i=>i.id!==id);setInvoices(next);storage.saveInvoices(next);showToast('Invoice deleted')}
   const exportBackup=()=>{const blob=new Blob([JSON.stringify(storage.exportAll(),null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`smart-billing-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href);showToast('Backup exported')}
   const importBackup=(file)=>{if(!file)return;if(file.size>5*1024*1024)return showToast('Backup file is too large','error');if(!confirm('Restore this backup? Current settings, parts and invoices may be replaced.'))return;const r=new FileReader();r.onload=()=>{try{const data=JSON.parse(r.result);storage.importAll(data);setSettings(storage.getSettings());setInvoices(storage.getInvoices());setParts(storage.getParts(DEFAULT_PARTS));setInvoice(storage.getDraft()||blankInvoice(storage.getSettings(),storage.getInvoices()));showToast('Backup restored')}catch{showToast('Invalid or unsupported backup file','error')}};r.onerror=()=>showToast('Could not read backup file','error');r.readAsText(file)}
+  const installApp=async()=>{
+    const result=await appInstall.install()
+    if(result==='accepted')showToast('App installation started')
+    else if(result==='dismissed')showToast('Installation cancelled','info')
+    else if(result==='installed')showToast('App is already installed','info')
+    else showToast('Chrome menu > Add to Home screen se app install karein','info')
+  }
 
-  return <Shell view={view} setView={setView} settings={settings} invoices={invoices} onBackup={exportBackup} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen}>
+  return <Shell view={view} setView={setView} settings={settings} invoices={invoices} onBackup={exportBackup} onInstall={installApp} installReady={appInstall.ready} installed={appInstall.installed} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen}>
     <AnimatePresence mode="wait">
       <motion.div key={view} initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} transition={{duration:.16}}>
         {view==='dashboard'&&<Dashboard invoices={invoices} settings={settings} setView={setView}/>} 
         {view==='invoice'&&<InvoiceEditor invoice={invoice} setInvoice={setInvoice} parts={parts} settings={settings} invoices={invoices} onSave={saveInvoice} onBlank={newBlank} showToast={showToast}/>} 
-        {view==='invoices'&&<InvoicesPage invoices={invoices} onEdit={editInvoice} onDelete={deleteInvoice}/>} 
+        {view==='invoices'&&<InvoicesPage invoices={invoices} onEdit={editInvoice} onDelete={deleteInvoice} showToast={showToast}/>}
         {view==='customers'&&<CustomersPage invoices={invoices}/>} 
         {view==='parts'&&<PartsPage parts={parts} setParts={setParts} showToast={showToast}/>} 
         {view==='settings'&&<SettingsPage settings={settings} setSettings={setSettings} showToast={showToast} onImport={importBackup}/>} 
